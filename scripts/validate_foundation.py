@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate the Phase 0 documentation contract without fetching dependencies."""
+"""Validate the pre-checkout foundation contract without fetching dependencies."""
 import json
 from pathlib import Path
 import re
@@ -11,9 +11,9 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     manifest = json.loads((ROOT / 'upstream/manifest.json').read_text())
     assert manifest['schema_version'] == 1
-    assert manifest['phase'] == 0, 'Replace this Phase 0 contract as Phase 1 begins'
+    assert manifest['phase'] in (0, '1a'), 'Update the contract for the checkout phase'
     for name in ('chromium', 'depot_tools'):
-        assert manifest[name]['revision'] is None, 'Phase 0 must not imply a verified build pin'
+        assert manifest[name]['revision'] is None, 'Pre-checkout phases must not imply a verified build pin'
     assert manifest['overlays'] == []
     series = ROOT / manifest['patch_series']
     assert series.is_file()
@@ -34,7 +34,7 @@ def main():
                 if '://' in target or target.startswith('#'):
                     continue
                 assert (path.parent / target.split('#')[0]).exists(), f'{name}: broken link {target}'
-    print(f'PASS: Phase 0 manifest, empty customization contract, file bounds, '
+    print(f'PASS: Phase {manifest["phase"]} manifest, empty customization contract, file bounds, '
           f'and local links in {markdown_count} Markdown files')
     print('Not a secret scanner, Chromium build, or browser test.')
 

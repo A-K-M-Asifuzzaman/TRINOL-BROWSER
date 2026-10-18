@@ -25,6 +25,9 @@ node_modules/
 *.app/
 *.dSYM/
 *.dmg
+*.sparsebundle/
+*.sparseimage
+*.asif
 *.pkg
 *.zip
 *.tar
