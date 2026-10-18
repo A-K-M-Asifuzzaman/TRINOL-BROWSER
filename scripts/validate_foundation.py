@@ -1,20 +1,18 @@
 #!/usr/bin/env python3
-"""Validate the pre-checkout foundation contract without fetching dependencies."""
+"""Validate the repository foundation contract without fetching dependencies."""
 import json
 from pathlib import Path
 import re
 import subprocess
+
+from verify_upstream_checkout import validate_manifest
 
 ROOT = Path(__file__).resolve().parents[1]
 
 
 def main():
     manifest = json.loads((ROOT / 'upstream/manifest.json').read_text())
-    assert manifest['schema_version'] == 1
-    assert manifest['phase'] in (0, '1a'), 'Update the contract for the checkout phase'
-    for name in ('chromium', 'depot_tools'):
-        assert manifest[name]['revision'] is None, 'Pre-checkout phases must not imply a verified build pin'
-    assert manifest['overlays'] == []
+    validate_manifest(manifest)
     series = ROOT / manifest['patch_series']
     assert series.is_file()
     assert not [line for line in series.read_text().splitlines()

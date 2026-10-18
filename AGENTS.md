@@ -8,10 +8,12 @@ services. Integrate Trinol-specific C++/Views UI and trusted WebUI through small
 reviewable patches and overlays. macOS arm64 is the first target; keep Windows
 and Linux portability in mind. Read docs/architecture.md before implementation.
 
-Phase 0 is approved. Phase 1A authorizes read-only storage inspection and product
-repository tooling/documentation only. Do not create disk images, reformat,
-repartition, install depot_tools, download Chromium/dependencies, change global
-settings, or proceed to Phase 1B/1C without explicit instruction. Distinguish
+Phases 0 and 1A are approved. Phase 1B authorizes dedicated external build
+directories, depot_tools bootstrap, a pinned stable Chromium checkout and
+dependency/toolchain sync. Keep at least 50 GiB physical free-space headroom.
+No disk images, reformatting, repartitioning, global configuration changes,
+Trinol source customizations, GN generation, compilation or browser launch are
+authorized. Stop before Phase 1C unless explicitly instructed. Distinguish
 proposals from implemented and tested behavior.
 
 ## Quality and tests
@@ -75,7 +77,8 @@ docs/upstream-workflow.md for the reproduction contract.
 
 Report outcome, changed files, checks and limitations, author verification,
 branch, commit hashes/messages, Git commands, remote push evidence and blockers.
-Include the storage verdict for Phase 1A; stop for review before Phase 1B/1C.
+Report source/tool pins, SDK and dependency/hook evidence for Phase 1B. Stop
+for review before Phase 1C and never claim a successful build during Phase 1B.
 Never describe a proposed feature as shipped or an unrun test as passing.
 
 ## graphify
