@@ -1,7 +1,7 @@
 # Fresh-machine reproduction and upstream maintenance
 
 This is the procedure for a later approved phase, not a claim that a browser can
-already be built from Phase 0. The manifest has no selected revisions yet, no
+already be built from Phase 0/1A. The manifest has no selected revisions yet, no
 patches and no overlays. Do not substitute a moving branch for a recorded pin.
 
 ## Preparation
@@ -17,10 +17,13 @@ patches and no overlays. Do not substitute a moving branch for a recorded pin.
    and record an exact depot_tools SHA too. Populate upstream/manifest.json in
    a reviewed Phase 1 change before claiming reproducibility.
 
-## Checkout and dependency sync (Phase 1 only)
+## Checkout and dependency sync (Phase 1B only)
 
 The following example assumes a separately provisioned `/Volumes/TrinolBuild`
-APFS volume. These paths are illustrative, not paths created by Phase 0.
+APFS volume. These paths are generic examples, not paths created by Phase 0/1A.
+The actual recommended machine-specific layout is recorded in the
+[Phase 1A report](phase-1a-storage-readiness.md); substitute that approved build
+root consistently rather than assuming this example mount exists.
 Set `CHROMIUM_REVISION` and `DEPOT_TOOLS_REVISION` to the full reviewed 40-character
 SHAs from the manifest. Never use literal placeholders or guess versions.
 
@@ -76,7 +79,7 @@ empty. For future versions, implement an applicator with these rules:
 For Phase 1's initial baseline, keep both customization lists empty and prove the
 unmodified build before adding product changes.
 
-## Build and launch (after Phase 1 approval)
+## Build and launch (Phase 1C only)
 
 Copy [the example GN arguments](../config/macos-arm64.args.gn.example) into
 `src/out/TrinolDev/args.gn` after validating them against the chosen revision.
@@ -110,3 +113,46 @@ Do not commit upstream source, build outputs, caches, test profiles, machine pat
 as active configuration, or credentials. Maintain licensing notices and a manifest
 for any redistributed third-party assets. Public releases additionally require a
 secure updater, signing/notarization and an incident response process.
+
+## Phase 1A preparation refinements
+
+Run the read-only preflight before provisioning or downloading. It requires an
+explicit fresh checkout path, verifies actual APFS/device/image backing and uses
+at least 200 GiB for the build environment plus 50 GiB safety headroom. Exit 0
+means storage passed with warnings, 1 means blocked, 2 means invalid CLI usage.
+It cannot reserve capacity or prove write access without writing. It deliberately
+rejects nonempty destinations and existing repository/gclient ancestors; use a
+separate reviewed inspection procedure to maintain an existing checkout.
+
+Keep sibling directories for `chromium/` (fetch root; source in `chromium/src/`),
+`depot_tools/`, `test-profile/` and logs under the approved build root. Generated
+GN/Ninja output stays in `chromium/src/out/TrinolDev/`. None belongs in product Git.
+Paths with shell metacharacters must be quoted even when they have no spaces.
+
+The manifest's phase is now `1a`; both revision fields remain null. In Phase 1B,
+choose an official stable version using Chromium release records, resolve its tag
+in the official repository to an exact commit, and verify that commit exists.
+Resolve an intentional depot_tools revision the same way. Record full SHA values,
+source version and selection rationale; do not copy moving `main` labels into the
+revision fields. Reconcile depot_tools compatibility with the chosen baseline.
+
+Before source sync, inspect the selected revision's `build/config/mac/mac_sdk.gni`
+and its documented SDK/toolchain checks, including `mac_sdk_official_version`.
+Compare these to `xcodebuild -version`, `xcrun --show-sdk-version` and the installed
+SDKs. Newer Xcode is not proof of compatibility. Keep Chromium's DEPS/hook-managed
+compiler and dependencies aligned with the selected source. Confirm compatibility
+in the Phase 1B record, and actual compilation only in Phase 1C.
+
+Large downloads start with Chromium `fetch` and continue through `gclient sync`
+(dependencies, toolchain and hooks). depot_tools installation is smaller but is
+also deferred to Phase 1B. Keep caches on the reviewed build storage too; do not
+silently fill the internal SSD with a separate Git cache. A full-history fetch
+may consume substantially more than a shallow fetch; decide and budget at Phase
+1B. No checkout or dependency download was performed during Phase 1A.
+
+For the 18 GiB M3 Pro, retain the proposed arm64 component configuration,
+`is_debug=false` and `symbol_level=1`, with an initial four-job local build limit.
+This is unbenchmarked guidance: monitor memory pressure/swap and disk headroom.
+Level 1 trades some debugging detail for lower resource use. Verify each argument
+against the pinned revision and record effective GN args. Do not use official
+release flags or reduce sandbox protection to achieve a successful launch.

@@ -1,4 +1,4 @@
-# Proposed local development configuration; not executed or release-ready.
+# Proposed Phase 1C local configuration; not executed or release-ready.
 # Validate all arguments against the selected Chromium revision before use.
 target_os = "mac"
 target_cpu = "arm64"

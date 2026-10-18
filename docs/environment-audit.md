@@ -3,6 +3,11 @@
 Audit date: 2026-10-18 (Asia/Dhaka). Read-only local inspection; no Chromium
 checkout, package installation, disk formatting or browser build performed.
 
+**Historical Phase 0 snapshot:** the broader Phase 1A inventory found an existing
+external APFS volume not assessed here. See the current
+[Phase 1A storage readiness report](phase-1a-storage-readiness.md) for the revised
+storage verdict; the measurements below are retained as original audit evidence.
+
 ## Findings
 
 | Check | Observed | Assessment |

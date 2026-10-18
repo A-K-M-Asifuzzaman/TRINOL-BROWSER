@@ -8,9 +8,11 @@ services. Integrate Trinol-specific C++/Views UI and trusted WebUI through small
 reviewable patches and overlays. macOS arm64 is the first target; keep Windows
 and Linux portability in mind. Read docs/architecture.md before implementation.
 
-Phase 0 is the current boundary. Do not download/build Chromium or start Phase 1
-until the user approves the next phase. Distinguish proposals from implemented
-and tested behavior.
+Phase 0 is approved. Phase 1A authorizes read-only storage inspection and product
+repository tooling/documentation only. Do not create disk images, reformat,
+repartition, install depot_tools, download Chromium/dependencies, change global
+settings, or proceed to Phase 1B/1C without explicit instruction. Distinguish
+proposals from implemented and tested behavior.
 
 ## Quality and tests
 
@@ -22,8 +24,11 @@ services. Keep customizations modular, accessible, localizable and reviewable.
 Review `git diff` and staged diffs before every commit. Run relevant available
 checks before pushing functional changes. Foundation checks are
 `python3 scripts/validate_foundation.py`, `bash -n scripts/audit_macos.sh` and
-`git diff --check`. Later phases require affected unit/browser/WebUI tests and
-real launch verification; document commands, failures and skipped checks.
+`git diff --check`. Run `python3 -m unittest discover -s tests -v` for storage
+preflight changes and syntax-check Python sources. Use the preflight with an
+explicit checkout path before future downloads; it must check actual APFS and
+physical backing capacity, including disk images. Later phases require affected
+unit/browser/WebUI tests and real launch verification; document commands, failures and skipped checks.
 Never claim foundation CI proves a Chromium build or production readiness.
 
 ## Security
@@ -70,7 +75,7 @@ docs/upstream-workflow.md for the reproduction contract.
 
 Report outcome, changed files, checks and limitations, author verification,
 branch, commit hashes/messages, Git commands, remote push evidence and blockers.
-Include the environment verdict for Phase 0; stop for review before Phase 1.
+Include the storage verdict for Phase 1A; stop for review before Phase 1B/1C.
 Never describe a proposed feature as shipped or an unrun test as passing.
 
 ## graphify
