@@ -26,8 +26,9 @@ Existing author: `Asif Zman <138548302+asif4762@users.noreply.github.com>`.
 The numeric account ID matches the authenticated owner; the configured email uses
 an older username suffix. Global author configuration was left unchanged. The old
 username lookup returned 404 and the email-list endpoint was unavailable with the
-current scopes. Verify GitHub commit attribution after delivery; do not claim
-that the old username still resolves.
+current scopes. After the first push, GitHub attributed both author and committer
+to `A-K-M-Asifuzzaman`, confirming the existing configured identity belongs to the
+owner. The old username itself does not resolve.
 
 The initial sandbox-only auth/network checks failed; host-authorized checks
 confirmed authentication. No credentials were generated, copied or exposed.
@@ -39,8 +40,41 @@ script syntax and live execution, staged whitespace checks, and ignore rules for
 upstream source, generated output, credentials and profiles. The staged diff was
 reviewed. Chromium builds/browser tests were not run.
 
-Push and hosted CI results are pending at this initial commit. The final chat
-report and a follow-up record will capture actual delivery evidence.
+Foundation commit: `de98ecfdeb71718f603e9950fa30449eddb7db6b` —
+`chore: establish Phase 0 Trinol Browser foundation`.
+
+`git push -u origin main` succeeded with `[new branch] main -> main`.
+`git ls-remote origin refs/heads/main` returned exactly the same SHA. GitHub's
+commit API confirmed the SHA and owner attribution for author and committer.
+The [foundation CI run](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39104674682)
+completed successfully on that commit. The working tree was clean afterward.
+
+This delivery evidence is a separate documentation commit,
+`docs: record Phase 0 GitHub delivery verification`. Its own hash, push and CI
+result are reported in the final chat to avoid a self-referential commit record.
+No outstanding GitHub blockers were observed. Storage readiness remains the
+next-phase blocker; this is not a production-ready browser.
+
+## Files created
+
+- `.github/workflows/foundation.yml`
+- `.gitignore`
+- `AGENTS.md`
+- `README.md`
+- `SECURITY.md`
+- `assets/README.md`
+- `config/macos-arm64.args.gn.example`
+- `docs/architecture.md`
+- `docs/environment-audit.md`
+- `docs/phase-0-delivery.md`
+- `docs/roadmap.md`
+- `docs/upstream-workflow.md`
+- `overlays/README.md`
+- `patches/series`
+- `scripts/audit_macos.sh`
+- `scripts/validate_foundation.py`
+- `trinol/README.md`
+- `upstream/manifest.json`
 
 ## Git commands executed before first commit
 
@@ -61,3 +95,34 @@ GitHub access. No force pushes, resets, history rewrites or duplicate remotes us
 Claude-mem reported its observer allowance exhausted, and no work_state tools were
 exposed in this session. Repository documentation provides persistent project
 instructions; no memory-service restart or configuration change was performed.
+
+## Delivery Git commands
+
+The initial file staging command was:
+
+```bash
+git add README.md AGENTS.md .gitignore SECURITY.md docs upstream patches overlays trinol assets config scripts .github
+git diff --cached --check
+git diff --cached --stat
+git diff --cached
+git diff --check
+git diff
+git check-ignore chromium/src/test.cc depot_tools/fetch out/Default/test.o .env secrets.json example.p12 profiles/Default/History
+git add AGENTS.md scripts/audit_macos.sh docs/phase-0-delivery.md
+git commit -m 'chore: establish Phase 0 Trinol Browser foundation'
+git fetch origin
+git push -u origin main
+git rev-parse HEAD
+git ls-remote origin refs/heads/main
+git status --short --branch
+git log -2 --format='%H %s'
+```
+
+The foundation validator also invokes
+`git ls-files -z --cached --others --exclude-standard`. CI runs
+`git show --format= --check HEAD`. The delivery-record commit uses targeted
+`git add docs/phase-0-delivery.md`, staged diff/whitespace review,
+`git commit -m 'docs: record Phase 0 GitHub delivery verification'`,
+`git fetch origin`, `git merge-base --is-ancestor origin/main HEAD`, and
+`git push origin main`, followed by the same status/log/remote-hash checks.
+Hosted CI results are checked with `gh run list` and `gh run watch --exit-status`.
