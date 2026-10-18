@@ -1,0 +1,77 @@
+# Trinol Browser architecture — Phase 0 decision
+
+Status: proposed implementation architecture. Nothing here is a shipped feature.
+
+## Product boundary
+
+Build a genuine Chromium-derived desktop browser with TrinolIT identity. Start
+with an unmodified macOS arm64 Chromium baseline, then add small customizations.
+Preserve the existing browser process, rendering engine, extension machinery and
+browser services. Windows and Linux are later targets. A WebView/Electron shell
+would require reimplementing too much browser functionality and is not the chosen
+architecture.
+
+## Layers and ownership
+
+| Layer | Responsibility and intended integration |
+| --- | --- |
+| Chromium baseline | Blink, V8, content, network, GPU, sandbox, storage and multiprocess lifecycle; retain upstream behavior |
+| Native shell | C++/Views integration for tab strip, toolbar, sidebar and window layout; use existing tab and navigation models |
+| Browser services | Reuse profiles, bookmarks, history, downloads, permissions, password storage, printing, PDF and session restore |
+| Trusted WebUI | Internal new-tab/settings surfaces where appropriate, with TypeScript/HTML/CSS, strict CSP and narrow Mojo interfaces |
+| Trinol modules | Product-specific code under trinol/, incorporated through explicit overlay destinations and GN integration patches |
+| Branding | Owned logos, themes, resources and app identity; reviewed license/provenance records under assets/ |
+| Future services | AI and account sync require separate design, consent and threat review; outside Phase 0 |
+| Release engineering | Platform packaging, signing, updates, rollback and vulnerability handling; must exist before public distribution |
+
+Exact upstream symbols and paths must be inspected at the selected revision.
+Likely integration areas include chrome/browser/ui/views, chrome/browser/ui/webui,
+chrome/browser/resources, chrome/app and corresponding GN targets. These are
+navigation hints, not evidence that specific patches already exist.
+
+## Repository and source flow
+
+The product Git repository holds reviewed patches, overlays, owned modules,
+assets, config templates, scripts, tests and CI. A separate upstream checkout
+holds Chromium and its DEPS dependencies. Reproduction flows from exact recorded
+upstream/tool pins, through dependency sync, then ordered patches and explicit
+overlay mappings, into generated output outside the product repository.
+
+`upstream/manifest.json` is the future reproducibility record. Its revisions are
+intentionally null in Phase 0. An empty patch series and overlay list declare no
+customizations. A build is not reproducible until real pins, resolved GN arguments,
+platform/toolchain details and a verified build record are committed.
+
+## Trust and compatibility
+
+Webpages stay in sandboxed renderer processes; privileged operations stay in
+browser services behind validated IPC. Custom UI must preserve permission prompts,
+security indicators, keyboard behavior, accessibility and incognito isolation.
+Never bypass certificate checks or sandboxing to make a feature appear functional.
+Use dedicated development profiles, not the user's Chrome profile.
+
+Chrome-equivalent service parity is not assumed. Google sign-in/sync and some
+extension identity flows depend on restricted APIs, as described in Chromium's
+[API guidance](https://www.chromium.org/developers/how-tos/api-keys/). DRM, proprietary
+codecs, extension-store distribution and service integrations need separate
+technical and distribution review. Do not embed third-party keys or claim Chrome
+branding/rights. No product license grant is invented at this stage; the owner
+must select licensing for original work before distribution, while preserving
+upstream and third-party notices.
+
+## Implementation and verification strategy
+
+Prove upstream builds and launches first. Add branding separately, then native UI
+changes in small modules without replacing browser service implementations.
+Introduce workspaces, split view and AI only in subsequent reviewed phases.
+
+Each upstream revision change must pass patch application, compilation and
+relevant tests. UI changes need browser/WebUI tests plus keyboard/accessibility
+checks; profile features need isolation and migration coverage. Smoke coverage
+must include navigation, tabs, private mode, downloads, bookmarks, history,
+permissions, extensions, session restore, PDF and printing before usable-alpha
+claims. Performance and crash behavior need measured baselines.
+
+The principal risks are upstream patch drift, UI regressions, resource pressure,
+service restrictions and timely security updates. Small patches, explicit pins,
+a baseline build and release gates are the chosen controls.

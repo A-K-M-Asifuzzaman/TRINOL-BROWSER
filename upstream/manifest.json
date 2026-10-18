@@ -1,0 +1,14 @@
+{
+  "schema_version": 1,
+  "phase": 0,
+  "chromium": {
+    "url": "https://chromium.googlesource.com/chromium/src.git",
+    "revision": null
+  },
+  "depot_tools": {
+    "url": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
+    "revision": null
+  },
+  "patch_series": "patches/series",
+  "overlays": []
+}
