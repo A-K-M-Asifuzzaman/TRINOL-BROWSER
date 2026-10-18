@@ -1,14 +1,48 @@
 {
   "schema_version": 1,
-  "phase": "1a",
+  "phase": "1b",
   "chromium": {
     "url": "https://chromium.googlesource.com/chromium/src.git",
-    "revision": null
+    "revision": "0e66b94549a8bd85f03fbdf189b752d6e7b63c32",
+    "version": "155.0.8059.85",
+    "channel": "Stable",
+    "tag": "refs/tags/155.0.8059.85",
+    "release_date": "2026-10-15",
+    "release_timestamp_utc": "2026-10-15T20:40:01.968Z",
+    "release_metadata_url": "https://chromiumdash.appspot.com/fetch_releases?channel=Stable&platform=Mac&num=3"
   },
   "depot_tools": {
     "url": "https://chromium.googlesource.com/chromium/tools/depot_tools.git",
-    "revision": null
+    "revision": "dca727ba1f8fa8f1e3b12a815d065818bb61d395",
+    "selection": "Matches the selected Chromium DEPS pin"
   },
   "patch_series": "patches/series",
-  "overlays": []
+  "overlays": [],
+  "verification": {
+    "source_head": true,
+    "depot_tools_head": true,
+    "dependencies_synced": true,
+    "hooks_completed": true,
+    "deps_sha256": "23ef1ed90785da130901961e4f4179b4fc10adac957eee5622d7e67fe4b82ec5",
+    "date": "2026-10-18",
+    "processed_sync_entries": 240,
+    "git_dependency_heads_verified": 151,
+    "gn_generated": false,
+    "chromium_compiled": false
+  },
+  "toolchain": {
+    "host_os": "mac",
+    "host_cpu": "arm64",
+    "xcode_version": "26.5",
+    "xcode_build": "17F42",
+    "mac_sdk_version": "26.5",
+    "mac_sdk_build": "25F70",
+    "gn": "2562 (cfcd774b98f3)",
+    "ninja": "1.12.1",
+    "siso": "v1.6.1",
+    "clang": "24.0.0git",
+    "clang_package_revision": "llvmorg-24-init-7747-g62397f8b-27",
+    "rustc": "1.100.0-nightly (1edd55dcf 2026-09-09)"
+  },
+  "proposed_gn_args": "config/macos-arm64.args.gn.example"
 }

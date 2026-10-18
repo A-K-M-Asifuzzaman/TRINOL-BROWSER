@@ -1,5 +1,5 @@
 # Proposed Phase 1C local configuration; not executed or release-ready.
-# Validate all arguments against the selected Chromium revision before use.
+# Names and values inspected at Chromium 155.0.8059.85; GN evaluation awaits Phase 1C.
 target_os = "mac"
 target_cpu = "arm64"
 is_debug = false
