@@ -380,3 +380,32 @@ are still pending. The full browser target, not a substitute, is being built.
 to `main`; remote HEAD matched. Authenticated owner and configured author were
 verified and preserved. [Actions run 39252295892](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39252295892)
 passed for this exact commit. Phase 2 has not started.
+
+
+### Recovery checkpoint — 22:55 Asia/Dhaka, 2026-10-19
+
+The same single-job attempt remained active after about 4h26m, with approximately
+11,445 completed actions and 37,112 remaining in that attempt's current graph.
+These are not cumulative project percentages. Inspection through 16:55:46 UTC
+found no `FAILED:` action markers and no `warning:` diagnostic lines in the log;
+there is still no final exit code or completed-browser claim.
+
+Across 3,120 samples, pressure levels were 1 and 2, maximum new swap growth was
+1.245 GiB, minimum external available space was 251.89 GiB, minimum internal
+available space was 60.98 GiB, and the longest observed sampling interval was
+41.20 seconds. The sustained-deterioration timer never started because new swap
+stayed below 2 GiB. This supports continuing the same guarded attempt without
+restarting or changing the GN configuration.
+
+A process-tree inspection showed that Siso's compiler workers use separate
+process groups. Therefore `process_group_cpu_percent` measures the runner/Siso
+group and can omit compiler-worker CPU; it is not total build CPU utilization.
+Host load and the separate process-tree snapshot provide additional activity
+observations. Pressure and swap monitoring remain host-wide and unaffected by
+that telemetry limitation.
+
+The recovery diagnosis milestone was
+`74a0bea5d9b9b3e438b8ef1efbac6a6047133df2` —
+`docs: record single-job recovery diagnosis and baseline`.
+Remote main matched and [Actions run 39252726092](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39252726092)
+passed. The initial build/launch matrix remains NOT TESTED while compilation runs.

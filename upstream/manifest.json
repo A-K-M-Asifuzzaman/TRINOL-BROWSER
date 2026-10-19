@@ -109,7 +109,15 @@
       ],
       "idle_swap_used_mib": 13131.44,
       "idle_swap_growth_mib": 0,
-      "guard_revision": "9ef87587af9cd6b828dad5dbd2baf67deb5cf05c"
+      "guard_revision": "9ef87587af9cd6b828dad5dbd2baf67deb5cf05c",
+      "checkpoint": {
+        "time_utc": "2026-10-19T16:55:15Z",
+        "state": "running",
+        "attempt_completed_steps": 11445,
+        "attempt_remaining_steps": 37112,
+        "failed_action_markers_observed": 0,
+        "compilation_complete": false
+      }
     }
   }
 }
