@@ -409,3 +409,26 @@ The recovery diagnosis milestone was
 `docs: record single-job recovery diagnosis and baseline`.
 Remote main matched and [Actions run 39252726092](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39252726092)
 passed. The initial build/launch matrix remains NOT TESTED while compilation runs.
+
+### Recovery checkpoint — 03:56 Asia/Dhaka, 2026-10-20
+
+The same one-job Siso attempt remained running at 21:56:40 UTC on October 19,
+after about 9h28m. Its current graph reported 16,082 completed actions and 32,244
+remaining. Inspection of the command log found zero `FAILED:` action markers
+and zero `warning:` diagnostic lines. These are observations of an unfinished
+attempt, not a successful final exit or cumulative project percentages.
+
+Across 6,702 resource samples, pressure levels were 1 and 2, maximum new swap
+growth remained 1.245 GiB, and the longest sampling interval remained 41.20
+seconds. The sustained-deterioration timer remained zero. At the checkpoint,
+pressure was 2 and swap growth was 0.699 GiB; free space was 251.05 GiB external
+and 63.59 GiB internal. Minimum available space over this attempt was 251.05 GiB
+external and 60.98 GiB internal. Compilation continues under the existing guard;
+the source, output directory, GN arguments and concurrency have not changed.
+
+The earlier progress checkpoint was delivered in
+`d34fdd963bbbdf3c88befdbe091d650c0643d041` —
+`docs: record sustained single-job build progress`.
+Remote main matched and [Actions run 39289887406](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39289887406)
+passed. Compilation, native launch and functional smoke-test completion remain
+unverified; Phase 1C remains PARTIAL and Phase 2 has not started.
