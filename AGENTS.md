@@ -13,7 +13,10 @@ compilation of the existing pinned Chromium checkout, artifact inspection and
 browser smoke tests using only the dedicated external test profile. Preserve
 source/tool pins and incremental outputs. Keep at least 50 GiB physical free
 space; stop compilation at 60 GiB, on mount changes or unsafe memory pressure.
-Start with four local jobs and reduce to two for sustained pressure. Keep Siso's
+Initial Phase 1C started with four jobs and reduced to two. Phase 1C-R authorizes
+recovery at one job after idle memory diagnostics, with sustained-deterioration
+guards and an exclusive runner lock. Preserve existing GN files and outputs.
+Keep Siso's
 cache external and remote execution disabled. No disk images, reformatting,
 repartitioning, global configuration changes, security bypasses or Trinol source
 customizations. Do not begin Phase 2 without explicit instruction. Distinguish

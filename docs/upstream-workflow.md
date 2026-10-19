@@ -142,6 +142,44 @@ stops for memory pressure, relieve the host pressure before retrying; do not
 reset the swap baseline repeatedly to work around the safety guard. See the
 [Phase 1C report](phase-1c-build-report.md) for commands, failures and actual results.
 
+### Phase 1C-R recovery
+
+After read-only memory/process diagnostics and a no-build trend sample show
+normal pressure or stable elevated pressure with adequate host disk headroom,
+resume the existing output without regenerating GN:
+
+```bash
+python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --jobs 1
+```
+
+The runner accepts 1, 2 or 4 jobs and uses an exclusive advisory lock at
+`logs/TrinolDev.lock`. A stale file is harmless; an active lock rejects another
+runner, including GN generation. Do not bypass it with a manual concurrent build.
+
+Critical pressure, 4 GiB swap growth, the 60 GiB external floor and 10 GiB internal
+floor still stop immediately at the next sample. Four jobs still request a
+reduction after 60 seconds of warning. At one or two jobs, the 180-second
+memory timer now starts only when warning pressure and at least 2 GiB new swap
+coincide. Normal pressure or growth below 1.5 GiB resets that timer; the small
+hysteresis band avoids noise at 2 GiB. The original attempt showed a brief swap
+spike inheriting an old warning timer, which did not prove sustained new growth.
+No hard resource threshold was raised. Monitor errors stop the owned process.
+
+Resource samples include actual monotonic intervals, swap growth, pressure,
+process-group CPU percentage from `ps`, host load, and bounded log-tail progress.
+CPU percentage is a `ps` observation, not a benchmark; action counters are local
+to each Siso attempt, not a fixed percentage of the entire project. Detailed
+command logs preserve warnings that fall outside the sampled tail. Sampling is
+requested every five seconds, not guaranteed in real time. A measured gap over
+60 seconds stops the build conservatively once the monitor regains control;
+uninterruptible I/O can delay even that response.
+
+Status distinguishes `completed`, `command_failure`, `controlled_stop`,
+`interrupted` and `monitor_failure`, retaining the actual child exit code.
+The CLI returns 75 for controlled resource stops, 1 for other failures, and 0
+only for successful command completion and required inspection. None of these
+build statuses alone establishes browser launch or functional success.
+
 Only after the entire `chrome` target finishes successfully, validate the bundle
 and launch the newly compiled executable with its dedicated profile:
 

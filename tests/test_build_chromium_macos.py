@@ -47,7 +47,51 @@ class ResourceTests(unittest.TestCase):
 
     def test_warning_at_two_jobs_requires_sustained_swap_growth(self):
         self.assertIsNone(b.stop_reason(self.sample(pressure=2), 15*b.GIB, 180, 2))
-        self.assertEqual(b.stop_reason(self.sample(pressure=2, swap_bytes=17*b.GIB), 15*b.GIB, 180, 2), 'memory_pressure')
+        self.assertIsNone(b.stop_reason(self.sample(pressure=2, swap_bytes=17*b.GIB), 15*b.GIB, 180, 2))
+        self.assertEqual(b.stop_reason(self.sample(pressure=2, swap_bytes=17*b.GIB),
+                         15*b.GIB, 180, 2, deterioration_seconds=180), 'memory_pressure')
+
+    def test_supported_job_arguments(self):
+        for jobs in (1, 2, 4):
+            self.assertEqual(b.parse_args(['--build-root', '/external', '--jobs', str(jobs)]).jobs, jobs)
+        self.assertEqual(b.parse_args(['--build-root', '/external']).jobs, 4)
+
+    def test_stable_historical_swap_at_one_job(self):
+        period = b.WarningPeriod(15*b.GIB)
+        for now in (0, 60, 180, 3600):
+            sample = self.sample(pressure=2)
+            warning, deterioration = period.observe(sample, now)
+            self.assertIsNone(b.stop_reason(sample, 15*b.GIB, warning, 1,
+                                           deterioration_seconds=deterioration))
+
+    def test_swap_spike_does_not_inherit_old_pressure_timer(self):
+        period = b.WarningPeriod(15*b.GIB)
+        period.observe(self.sample(pressure=2), 0)
+        sample = self.sample(pressure=2, swap_bytes=17*b.GIB)
+        warning, deterioration = period.observe(sample, 1000)
+        self.assertEqual(deterioration, 0)
+        self.assertIsNone(b.stop_reason(sample, 15*b.GIB, warning, 1,
+                                       deterioration_seconds=deterioration))
+        warning, deterioration = period.observe(sample, 1180)
+        self.assertEqual(b.stop_reason(sample, 15*b.GIB, warning, 1,
+                         deterioration_seconds=deterioration), 'memory_pressure')
+
+    def test_normal_pressure_recovers_deterioration_period(self):
+        period = b.WarningPeriod(15*b.GIB)
+        high = self.sample(pressure=2, swap_bytes=17*b.GIB)
+        period.observe(high, 0)
+        period.observe(self.sample(pressure=1, swap_bytes=17*b.GIB), 170)
+        self.assertEqual(period.observe(high, 180)[1], 0)
+
+    def test_swap_hysteresis_then_recovery(self):
+        period = b.WarningPeriod(15*b.GIB)
+        period.observe(self.sample(pressure=2, swap_bytes=17*b.GIB), 0)
+        self.assertEqual(period.observe(self.sample(pressure=2, swap_bytes=16.9*b.GIB), 60)[1], 60)
+        self.assertEqual(period.observe(self.sample(pressure=2, swap_bytes=16.4*b.GIB), 90)[1], 0)
+
+    def test_process_cpu_does_not_include_other_groups(self):
+        probe = Mock(command=Mock(return_value=b'123 20.0\n456 80.0\n123 5.0\n'))
+        self.assertEqual(b.process_cpu(probe, Mock(pid=123)), 25)
 
     def test_generation_does_not_offer_compiler_job_reduction(self):
         self.assertIsNone(b.stop_reason(self.sample(pressure=2), 15*b.GIB, 90, 4, generating=True))
@@ -67,6 +111,19 @@ class ResourceTests(unittest.TestCase):
             b.stop_process(process)
         kill.assert_called_once_with(123, signal.SIGINT)
         process.wait.assert_called_once_with(timeout=45)
+
+    def test_stop_escalates_only_after_wait_timeout(self):
+        process = Mock(pid=123, poll=Mock(return_value=None))
+        process.wait.side_effect = [b.subprocess.TimeoutExpired('compiler', 45), None]
+        with patch.object(b.os, 'killpg') as kill:
+            b.stop_process(process)
+        self.assertEqual(kill.call_args_list,
+                         [unittest.mock.call(123, signal.SIGINT), unittest.mock.call(123, signal.SIGTERM)])
+
+    def test_finished_process_is_not_signalled(self):
+        with patch.object(b.os, 'killpg') as kill:
+            b.stop_process(Mock(poll=Mock(return_value=0)))
+        kill.assert_not_called()
 
     def test_environment_is_session_local(self):
         with patch.dict(b.os.environ, {'PATH': '/usr/bin', 'SISO_PATH': '/other/siso'}):
@@ -92,6 +149,106 @@ class FilesystemTests(unittest.TestCase):
 
     def test_parent_traversal_rejected(self):
         with self.assertRaises(ValueError): b.contained(self.root, '../outside')
+
+    def test_duplicate_build_rejected_and_stale_file_reusable(self):
+        (self.root/'logs').mkdir()
+        with b.build_lock(self.root):
+            with self.assertRaisesRegex(ValueError, 'Another guarded build'):
+                with b.build_lock(self.root): self.fail('Duplicate lock acquired')
+        with b.build_lock(self.root): pass
+        self.assertTrue((self.root/'logs/TrinolDev.lock').exists())
+
+    def test_lock_release_after_exception(self):
+        (self.root/'logs').mkdir()
+        with self.assertRaises(RuntimeError):
+            with b.build_lock(self.root): raise RuntimeError('test')
+        with b.build_lock(self.root): pass
+
+    def test_lock_rejects_symlink(self):
+        (self.root/'logs').mkdir()
+        (self.root/'logs/TrinolDev.lock').symlink_to(self.root/'other')
+        with self.assertRaises(ValueError):
+            with b.build_lock(self.root): self.fail('Symlink lock accepted')
+
+    def test_progress_counts_are_attempt_local(self):
+        log = self.root/'command.log'
+        log.write_text('[9/100] 1s F CXX object.o\nwarning: example\n')
+        p = b.read_progress(log)
+        self.assertEqual((p['completed_steps'], p['remaining_steps']), (9, 91))
+        self.assertEqual(p['last_warning_in_tail'], 'warning: example')
+        log.write_text('Build Failure: 10 done, 0 failed, 90 remaining\n interrupt by signal\n')
+        p = b.read_progress(log)
+        self.assertEqual((p['completed_steps'], p['failed_steps'], p['remaining_steps']), (10, 0, 90))
+
+    def monitor(self, memories, child, times=(0, 5), mount_failure=None):
+        volume = SimpleNamespace(mount=str(self.root))
+        stat = SimpleNamespace(f_bavail=100, f_frsize=b.GIB)
+        with patch.object(b, 'memory', side_effect=memories), \
+             patch.object(b, 'assert_mount', side_effect=mount_failure), \
+             patch.object(b.os, 'statvfs', return_value=stat), \
+             patch.object(b, 'process_cpu', return_value=10), \
+             patch.object(b.subprocess, 'Popen', return_value=child), \
+             patch.object(b, 'stop_process') as stop, \
+             patch.object(b.time, 'sleep'), \
+             patch.object(b.time, 'monotonic', side_effect=times):
+            result = b.guarded(['compiler'], self.root, self.root, volume, Mock(), 1, False, 42)
+        return result, stop
+
+    def test_monitor_failure_stops_child_and_is_not_compiler_failure(self):
+        normal = {'pressure':1, 'swap_bytes':0}
+        child = Mock(pid=123, returncode=-2, poll=Mock(return_value=None))
+        result, stop = self.monitor([normal, normal, OSError('sensor unavailable')], child)
+        stop.assert_called_once_with(child)
+        self.assertEqual(result['outcome'], 'monitor_failure')
+
+    def test_controlled_stop_records_real_child_status(self):
+        normal = {'pressure':1, 'swap_bytes':0}
+        child = Mock(pid=123, returncode=-2, poll=Mock(return_value=None))
+        result, stop = self.monitor([normal, normal, {'pressure':4, 'swap_bytes':0}], child)
+        stop.assert_called_once_with(child)
+        self.assertEqual((result['outcome'], result['exit_code']), ('controlled_stop', -2))
+        self.assertEqual(result['latest']['interval_seconds'], 5)
+
+    def test_successful_browser_command_reports_completion(self):
+        normal = {'pressure':1, 'swap_bytes':0}
+        child = Mock(pid=123, returncode=0, poll=Mock(return_value=0))
+        result, _ = self.monitor([normal, normal], child)
+        self.assertEqual((result['state'], result['outcome'], result['exit_code']),
+                         ('finished', 'completed', 0))
+
+    def test_delayed_monitor_fails_closed(self):
+        normal = {'pressure':1, 'swap_bytes':0}
+        child = Mock(pid=123, returncode=-2, poll=Mock(return_value=None))
+        result, stop = self.monitor([normal]*3, child, times=(0, 61))
+        stop.assert_called_once_with(child)
+        self.assertEqual(result['outcome'], 'monitor_failure')
+        self.assertIn('61.0s', result['reason'])
+        self.assertEqual(result['latest']['interval_seconds'], 61)
+
+    def test_disconnection_stops_child_without_reopening_mount(self):
+        normal = {'pressure':1, 'swap_bytes':0}
+        child = Mock(pid=123, returncode=-2, poll=Mock(return_value=None))
+        result, stop = self.monitor([normal]*2, child,
+            mount_failure=[None, ValueError('Disconnected'), ValueError('Disconnected')])
+        stop.assert_called_once_with(child)
+        self.assertEqual(result['outcome'], 'monitor_failure')
+        self.assertIn('evidence_error', result)
+
+    def test_incremental_build_preserves_output_and_does_not_generate_gn(self):
+        output = self.root/'chromium/src/out/TrinolDev'; output.mkdir(parents=True)
+        files = {'args.gn': b'original args', 'build.ninja': b'existing graph', 'partial.o': b'object data'}
+        for name, data in files.items(): (output/name).write_bytes(data)
+        paths = {name:self.root/name for name in ('chromium/src/out/TrinolDev', 'logs', 'depot_tools', 'siso-cache')}
+        paths['logs'].mkdir()
+        args = b.parse_args(['--build-root', str(self.root), '--jobs', '1'])
+        with patch.object(b, 'inspect_args'), \
+             patch.object(b, 'guarded', return_value={'state':'finished', 'exit_code':0}) as guard:
+            self.assertEqual(b.run_build(args, self.root, paths, SimpleNamespace(), Mock(), 42), 0)
+        command = guard.call_args.args[0]
+        self.assertEqual(command[-1], 'chrome')
+        self.assertEqual(command[command.index('-j')+1], '1')
+        self.assertEqual(Path(command[0]).name, 'autoninja')
+        for name, data in files.items(): self.assertEqual((output/name).read_bytes(), data)
 
     def test_guard_does_not_launch_under_critical_pressure(self):
         volume = SimpleNamespace(mount=str(self.root))
