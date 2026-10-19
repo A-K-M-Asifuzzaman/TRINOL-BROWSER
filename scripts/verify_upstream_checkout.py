@@ -21,7 +21,7 @@ def validate_manifest(manifest):
     if manifest.get('schema_version') != 1:
         raise ValueError('Unsupported manifest schema')
     phase = manifest.get('phase')
-    if phase not in (0, '1a', '1b'):
+    if phase not in (0, '1a', '1b', '1c'):
         raise ValueError('Unsupported phase')
     for name, url in URLS.items():
         entry = manifest.get(name, {})
@@ -30,14 +30,14 @@ def validate_manifest(manifest):
         if entry.get('url') != url:
             raise ValueError(f'Unexpected {name} upstream URL')
         revision = entry.get('revision')
-        if phase == '1b':
+        if phase in ('1b', '1c'):
             if not isinstance(revision, str) or not SHA.fullmatch(revision):
                 raise ValueError(f'{name} needs a full lowercase commit SHA')
         elif revision is not None:
             raise ValueError('Pre-checkout phases must retain null revision pins')
     if manifest.get('patch_series') != 'patches/series' or manifest.get('overlays') != []:
         raise ValueError('Baseline must retain the empty customization contract')
-    if phase == '1b':
+    if phase in ('1b', '1c'):
         chromium = manifest['chromium']
         version = chromium.get('version', '')
         if not re.fullmatch(r'\d+\.\d+\.\d+\.\d+', version):
@@ -52,6 +52,16 @@ def validate_manifest(manifest):
                 raise ValueError(f'Phase 1B completion evidence missing: {field}')
         if not re.fullmatch(r'[0-9a-f]{64}', evidence.get('deps_sha256', '')):
             raise ValueError('Missing verified DEPS digest')
+        if phase == '1c':
+            build = manifest.get('build', {})
+            if not isinstance(build, dict) or build.get('status') != 'complete':
+                raise ValueError('Phase 1C requires a completed build record')
+            for field in ('gn_generated', 'chromium_compiled'):
+                if evidence.get(field) is not True:
+                    raise ValueError(f'Phase 1C completion evidence missing: {field}')
+            for field in ('browser_launched', 'smoke_tests_completed'):
+                if build.get(field) is not True:
+                    raise ValueError(f'Phase 1C runtime evidence missing: {field}')
     return manifest
 
 
@@ -70,7 +80,7 @@ def release_version(source):
 
 def verify(manifest, checkout_root, depot_tools):
     validate_manifest(manifest)
-    if manifest['phase'] != '1b':
+    if manifest['phase'] not in ('1b', '1c'):
         raise ValueError('Manifest has no verified Phase 1B checkout yet')
     checkout_root = Path(checkout_root).expanduser().resolve(strict=True)
     source = (checkout_root / 'src').resolve(strict=True)
@@ -107,7 +117,7 @@ def verify(manifest, checkout_root, depot_tools):
     return [f'Chromium {manifest["chromium"]["version"]}: {manifest["chromium"]["revision"]}',
             f'depot_tools: {manifest["depot_tools"]["revision"]}',
             f'DEPS SHA-256: {digest}',
-            'Tracked source/tool files are clean; no build was run.',
+            'Tracked source/tool files are clean; this verifier does not run builds.',
             'Dependency/hook completion is recorded evidence; this check does not rerun sync '
             'or prove every dependency remains unchanged.']
 

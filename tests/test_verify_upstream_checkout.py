@@ -67,12 +67,33 @@ class ManifestTests(unittest.TestCase):
         with self.assertRaises(ValueError): v.validate_manifest(data)
 
     def test_bad_phase_or_schema(self):
-        for key,value in (('phase','1c'),('schema_version',2)):
+        for key,value in (('phase','2'),('schema_version',2)):
             data=manifest(); data[key]=value
             with self.subTest(key=key), self.assertRaises(ValueError): v.validate_manifest(data)
 
     def test_missing_deps_digest(self):
         data=manifest(); data['verification'].pop('deps_sha256')
+        with self.assertRaises(ValueError): v.validate_manifest(data)
+
+    def phase1c(self):
+        data=manifest(); data['phase']='1c'
+        data['verification'].update(gn_generated=True, chromium_compiled=True)
+        data['build']={'status':'complete','browser_launched':True,'smoke_tests_completed':True}
+        return data
+
+    def test_verified_phase1c(self):
+        v.validate_manifest(self.phase1c())
+
+    def test_compilation_alone_cannot_complete_phase1c(self):
+        for key in ('browser_launched','smoke_tests_completed'):
+            data=self.phase1c(); data['build'][key]=False
+            with self.subTest(key=key), self.assertRaises(ValueError): v.validate_manifest(data)
+
+    def test_unbuilt_or_partial_phase1c_is_rejected(self):
+        for key in ('gn_generated','chromium_compiled'):
+            data=self.phase1c(); data['verification'][key]=False
+            with self.subTest(key=key), self.assertRaises(ValueError): v.validate_manifest(data)
+        data=self.phase1c(); data['build']['status']='in_progress'
         with self.assertRaises(ValueError): v.validate_manifest(data)
 
 

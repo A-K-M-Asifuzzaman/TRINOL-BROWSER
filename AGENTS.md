@@ -8,13 +8,16 @@ services. Integrate Trinol-specific C++/Views UI and trusted WebUI through small
 reviewable patches and overlays. macOS arm64 is the first target; keep Windows
 and Linux portability in mind. Read docs/architecture.md before implementation.
 
-Phases 0 and 1A are approved. Phase 1B authorizes dedicated external build
-directories, depot_tools bootstrap, a pinned stable Chromium checkout and
-dependency/toolchain sync. Keep at least 50 GiB physical free-space headroom.
-No disk images, reformatting, repartitioning, global configuration changes,
-Trinol source customizations, GN generation, compilation or browser launch are
-authorized. Stop before Phase 1C unless explicitly instructed. Distinguish
-proposals from implemented and tested behavior.
+Phases 0, 1A and 1B are approved. Phase 1C authorizes GN generation, native
+compilation of the existing pinned Chromium checkout, artifact inspection and
+browser smoke tests using only the dedicated external test profile. Preserve
+source/tool pins and incremental outputs. Keep at least 50 GiB physical free
+space; stop compilation at 60 GiB, on mount changes or unsafe memory pressure.
+Start with four local jobs and reduce to two for sustained pressure. Keep Siso's
+cache external and remote execution disabled. No disk images, reformatting,
+repartitioning, global configuration changes, security bypasses or Trinol source
+customizations. Do not begin Phase 2 without explicit instruction. Distinguish
+compilation, executable launch and GUI/functional evidence.
 
 ## Quality and tests
 
@@ -77,8 +80,9 @@ docs/upstream-workflow.md for the reproduction contract.
 
 Report outcome, changed files, checks and limitations, author verification,
 branch, commit hashes/messages, Git commands, remote push evidence and blockers.
-Report source/tool pins, SDK and dependency/hook evidence for Phase 1B. Stop
-for review before Phase 1C and never claim a successful build during Phase 1B.
+Report pins, effective GN arguments, build exit status, resource observations,
+artifact checks and individual browser test results for Phase 1C. Stop for
+architect review before Phase 2; incomplete builds or launches are partial.
 Never describe a proposed feature as shipped or an unrun test as passing.
 
 ## graphify
