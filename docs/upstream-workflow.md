@@ -122,26 +122,34 @@ unmodified build before adding product changes.
 
 ## Build and launch (Phase 1C only)
 
-Copy [the example GN arguments](../config/macos-arm64.args.gn.example) into
-`src/out/TrinolDev/args.gn` after validating them against the chosen revision.
-From the separate upstream `src` directory:
+From product Git, use the resource-monitored runner with an approved build root:
 
 ```bash
-gn gen out/TrinolDev
-# After confirming GN selected the hook-configured Siso executor:
-autoninja -C out/TrinolDev -j 4 -cache_dir="$BUILD_ROOT/siso-cache" chrome
-out/TrinolDev/Chromium.app/Contents/MacOS/Chromium --user-data-dir="$BUILD_ROOT/test-profile"
+xcrun metal --version
+python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --generate
+python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --jobs 4
+# After a pressure stop, resume the same output at two jobs:
+python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --jobs 2
 ```
 
-These are planned Phase 1C commands, not executed Phase 1B checks. Record resolved GN arguments,
-source/tool SHAs, SDK/toolchain versions, build logs and launch behavior. Four jobs
-is a starting resource limit for this host, not a measured optimal configuration.
-The Siso-specific cache flag avoids its macOS internal-disk default; omit that flag
-if deliberately switching the executor to plain Ninja. The six proposed GN
-arguments retain local execution (`use_remoteexec=false` by upstream default).
-Use only a disposable dedicated profile. Keep generated output outside product Git.
-Choose relevant unit/browser tests from the pinned source and record exact commands
-and results; a successful launch alone is insufficient for release readiness.
+If Xcode reports a missing Metal compiler, install its supported matching component
+with `xcodebuild -downloadComponent MetalToolchain -exportPath "$BUILD_ROOT/metal-toolchain"`,
+then verify `xcrun metal --version`. Xcode manages the installed component location.
+The runner verifies pins and APFS capacity, preserves matching GN arguments,
+checks resolved values, keeps Siso's cache external and stops on unsafe resource
+conditions. Never run concurrent builds against the same output. See the
+[Phase 1C report](phase-1c-build-report.md) for commands, failures and actual results.
+
+Only after the entire `chrome` target finishes successfully, validate the bundle
+and launch the newly compiled executable with its dedicated profile:
+
+```bash
+"$BUILD_ROOT/chromium/src/out/TrinolDev/Chromium.app/Contents/MacOS/Chromium" --user-data-dir="$BUILD_ROOT/test-profile"
+```
+
+Keep generated output outside product Git. Record exact artifact, launch and
+functional checks; successful compilation alone does not establish runtime or
+release readiness.
 
 ## Updating upstream
 

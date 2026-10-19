@@ -27,7 +27,7 @@
     "date": "2026-10-18",
     "processed_sync_entries": 240,
     "git_dependency_heads_verified": 151,
-    "gn_generated": false,
+    "gn_generated": true,
     "chromium_compiled": false
   },
   "toolchain": {
@@ -42,7 +42,38 @@
     "siso": "v1.6.1",
     "clang": "24.0.0git",
     "clang_package_revision": "llvmorg-24-init-7747-g62397f8b-27",
-    "rustc": "1.100.0-nightly (1edd55dcf 2026-09-09)"
+    "rustc": "1.100.0-nightly (1edd55dcf 2026-09-09)",
+    "metal": "32023.883",
+    "metal_component_build": "17F42"
   },
-  "proposed_gn_args": "config/macos-arm64.args.gn.example"
+  "proposed_gn_args": "config/macos-arm64.args.gn.example",
+  "build": {
+    "phase": "1c",
+    "status": "in_progress",
+    "output_directory": "out/TrinolDev",
+    "target": "chrome",
+    "executor": "siso",
+    "initial_jobs": 4,
+    "effective_gn_args": {
+      "target_os": "mac",
+      "target_cpu": "arm64",
+      "is_debug": false,
+      "is_component_build": true,
+      "symbol_level": 1,
+      "is_official_build": false,
+      "use_siso": true,
+      "use_lld": true,
+      "use_remoteexec": false
+    },
+    "browser_launched": false,
+    "smoke_tests_completed": false,
+    "current_jobs": 2,
+    "concurrency_reason": "Sustained warning-level host memory pressure stopped the initial four-job attempt",
+    "previous_attempt": {
+      "exit_code": 1,
+      "completed_steps": 1051,
+      "failure": "Missing Xcode Metal Toolchain in ANGLE shader compilation",
+      "correction": "Installed Apple Metal Toolchain 17F42; xcrun metal --version succeeds"
+    }
+  }
 }
