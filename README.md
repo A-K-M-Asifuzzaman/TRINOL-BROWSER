@@ -5,9 +5,10 @@ then Windows and Linux. It will retain Chromium's browser services while adding
 TrinolIT branding and a distinct native interface. No browser is implemented yet.
 
 **Phase 1C is partial:** GN generation passed and a missing Metal compiler was
-installed. The two-job build completed 16,212 steps in its latest attempt before
+installed. The previous two-job build completed 16,212 steps before
 the memory guard stopped it. Incremental output is preserved; no completed browser
-or launch is claimed. Source/tool pins remain unchanged.
+or launch is claimed. Phase 1C-R recovery is now running at one job after memory
+diagnostics and tested guard improvements. Source/tool pins remain unchanged.
 
 This repository contains Trinol-owned changes, documentation, configuration
 examples and validation. The Chromium checkout, depot_tools and build outputs

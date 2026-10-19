@@ -5,7 +5,7 @@
 | 0 — approved | Environment audit, architecture, small product repository, GitHub workflow | Foundation validation, owner verification and confirmed push; explicit review before proceeding |
 | 1A — approved | Read-only storage inventory, preflight utility/tests, build preparation documentation | Verified candidate filesystem/backing capacity, tests and GitHub delivery; no downloads or storage changes |
 | 1B — approved | Approved storage path, exact verified source/tool pins, Chromium checkout and toolchain | Successful dependency sync, matching SHAs, SDK compatibility and checkout evidence |
-| 1C — partial, memory-blocked | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
+| 1C — partial, recovery in progress | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
 | 2 — proposed | Trinol branding and packaging identity | Reproducible patches, resource/build tests and launch checks |
 | 3 — proposed | Native UI redesign and trusted internal surfaces | Browser/WebUI, accessibility, keyboard and functional regression checks |
 | Later — proposed | Workspaces, split view, command palette, optional AI/sync | Separate designs, privacy/security tests and measured performance |
@@ -16,7 +16,8 @@ launch. Phase 1B has verified source/tool pins, dependency sync and hooks; see t
 [checkout report](phase-1b-checkout-report.md). It does not satisfy the build/launch
 criterion. Phase 1C passed GN generation and progressed through native compilation, but the
 two-job attempt stopped safely for host memory pressure. Incremental output is
-preserved. See the [build report](phase-1c-build-report.md) for exact evidence and
+preserved. Phase 1C-R now continues at one job after stable idle-memory checks
+and tested guard improvements. See the [build report](phase-1c-build-report.md) for exact evidence and
 resume requirements; native launch and functionality remain unverified.
 Phase 2 still requires new explicit instruction after architect review.
 No product UI, AI integration, signing setup or distribution is implemented.

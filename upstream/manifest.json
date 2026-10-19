@@ -67,8 +67,8 @@
     },
     "browser_launched": false,
     "smoke_tests_completed": false,
-    "current_jobs": 2,
-    "concurrency_reason": "Sustained warning-level host memory pressure stopped the initial four-job attempt",
+    "current_jobs": 1,
+    "concurrency_reason": "Phase 1C-R requests one job after the earlier two-job resource stop",
     "previous_attempt": {
       "exit_code": 1,
       "completed_steps": 1051,
@@ -95,6 +95,21 @@
       "output_allocated_bytes": 5358772224
     },
     "final_available_external_bytes": 274637193216,
-    "resume_requirement": "Relieve host memory pressure, recheck resource headroom, then resume the preserved output at two jobs"
+    "resume_requirement": "After any resource stop, recheck idle trends and headroom before resuming the preserved output at one job",
+    "recovery": {
+      "phase": "1c-r",
+      "status": "in_progress",
+      "jobs": 1,
+      "evidence_directory": "logs/phase1c-build-dbqart3q",
+      "preflight_directory": "logs/phase1cr-preflight-fpqndvnb",
+      "gn_regenerated": false,
+      "idle_pressure_levels": [
+        1,
+        1
+      ],
+      "idle_swap_used_mib": 13131.44,
+      "idle_swap_growth_mib": 0,
+      "guard_revision": "9ef87587af9cd6b828dad5dbd2baf67deb5cf05c"
+    }
   }
 }

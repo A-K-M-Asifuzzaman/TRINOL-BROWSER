@@ -1,6 +1,7 @@
 # Phase 1C — native build and runtime evidence
 
-Status: **PARTIAL — memory-blocked**, verified 2026-10-19. GN generation passed,
+Prior Phase 1C verdict: **PARTIAL — memory-blocked**, verified 2026-10-19.
+Current Phase 1C-R recovery evidence is appended below. GN generation passed,
 and the missing Metal compiler was installed and its failing action recovered.
 The latest two-job attempt completed 16,212 steps before the resource guard
 interrupted it. The full browser target is incomplete. No application launch or
@@ -288,3 +289,94 @@ launch with the dedicated profile, and complete the feasible functional matrix.
 Then obtain architect review and explicit Phase 2 authorization.
 
 PHASE 1C PARTIAL/BLOCKED — AWAITING ARCHITECT REVIEW
+
+
+## Phase 1C-R recovery — 2026-10-19
+
+Recovery status: **IN PROGRESS; Phase 1C remains PARTIAL**. Earlier attempts and
+verdicts above are retained as history. The recovery request explicitly authorizes
+one local job, guard improvements and incremental continuation without GN regeneration.
+
+### Host diagnosis before recovery
+
+Native Darwin arm64, macOS 26.6.2 (25G83), 18 GiB RAM and 11 CPUs were reverified.
+At 12:22:51 and 12:24:12 UTC, with no compiler/Siso running, pressure was normal
+(level 1). Swap remained exactly 13,131.44 MiB used out of 14,336 MiB allocated
+(about 12.82 GiB used). Over those 81 seconds, swap-out counters did not increase;
+pageouts increased by 273 pages, while compressed-memory occupancy decreased.
+The machine still had unrelated applications running, so this was a no-build
+observation rather than a claim that the whole host was idle.
+
+The first `top` sample reported 44.31% CPU idle, 6.14% user and 49.54% system.
+`vm_stat` reported approximately 5.13 GiB compressed-memory occupancy in the first
+saved snapshot, decreasing by about 0.33 GiB in the second. These are point-in-time
+host readings, not memory attributed to Chromium. External available space was
+274,689,495,040 bytes (255.82 GiB); internal available space was about 62.18 GiB.
+The 12:28:14 UTC prelaunch check again showed normal pressure and unchanged swap.
+
+Largest application groups by summed `ps` RSS were Brave Browser (~2.36 GiB),
+ChatGPT (~1.96 GiB), and Cursor (~1.01 GiB). Shared pages may be counted more than
+once, so these are not precise physical footprints. Closing unused windows in
+those applications may help; none was closed or terminated. No restart or system
+memory change was needed for this observed recovery decision. Normal pressure,
+unchanged swap and adequate disk headroom supported a tightly guarded one-job
+attempt. High accumulated swap alone was not treated as exhaustion. Apple's
+[memory reporting guidance](https://support.apple.com/en-lamr/guide/activity-monitor/actmntr1004/mac)
+also distinguishes pressure from the amount of swap in use.
+
+Sanitized local evidence: `logs/phase1cr-preflight-fpqndvnb/idle-first.json`,
+`idle-second.json`, and `starting-state.json`. The starting state records unchanged
+`args.gn` SHA-256 `cabeadd749736e664c312aca9303a57edd103c34fcc39d66d782128c4f44c1ab`
+and existing `build.ninja` metadata, alongside the prior attempt's 16,212 done /
+53,054 remaining. Those earlier counters are not added to a new attempt's counter
+or treated as a permanent percentage.
+
+### Guard correction and verification
+
+The earlier guard correctly protected the host conservatively, but its stop did
+not establish sustained new swap growth: the final ten seconds added about
+1.12 GiB and immediately inherited an already-old warning timer. The recovery
+policy times the combination of pressure and new growth, with small hysteresis.
+The exact policy and exit meanings are in the
+[recovery operating instructions](upstream-workflow.md#phase-1c-r-recovery).
+
+The runner accepts 1, 2 and 4 jobs. It retains the critical-pressure stop, 4 GiB
+new-swap cap, 60 GiB external stop floor, 10 GiB internal floor, mount checks,
+owned-process-group termination and unchanged source/GN validation. At one or
+two jobs, warning pressure plus 2 GiB new swap starts a 180-second timer; normal
+pressure or growth below 1.5 GiB resets it. Four-job warning reduction remains.
+An advisory lock prevents concurrent runner invocations against this output.
+The live lock check rejected a second acquisition while the one-job build ran;
+no second compiler was launched. The lock file is retained safely after release.
+
+Samples now record actual intervals, pressure/swap growth, CPU observations and
+bounded log-tail progress. Delays above 60 seconds stop conservatively when the
+monitor regains control; blocking I/O can still delay response. Controlled stops,
+monitor errors, user interruptions and command failures are distinguished while
+retaining the actual child exit. No numeric hard resource threshold was raised.
+
+**112 offline tests passed** (94 existing plus 18 added), including argument modes,
+transient recovery, sustained deterioration, hysteresis, duplicate locking,
+lock release/symlink protection, CPU/progress parsing, monitor delays/errors,
+disconnection during an active child, controlled/successful exits, termination
+escalation and preservation of existing output without GN regeneration.
+Foundation validation, Python compilation, shell syntax, diff checks and staged
+credential-pattern/file-type scanning passed.
+
+### Recovery invocation and delivery
+
+```bash
+python3 scripts/build_chromium_macos.py --build-root '/Volumes/ssd(mac)2/TrinolBuild' --jobs 1
+```
+
+Fresh source/tool verification passed. GN values remained unchanged. No GN
+regeneration was requested. Actual executor: Siso offline with `-local_jobs=1`
+and the existing external `siso-cache`. Evidence: `logs/phase1c-build-dbqart3q`.
+The attempt has begun actual native compilation; final exit and runtime results
+are still pending. The full browser target, not a substitute, is being built.
+
+`9ef87587af9cd6b828dad5dbd2baf67deb5cf05c` —
+`fix(build): support guarded single-job Chromium recovery` was pushed normally
+to `main`; remote HEAD matched. Authenticated owner and configured author were
+verified and preserved. [Actions run 39252295892](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39252295892)
+passed for this exact commit. Phase 2 has not started.
