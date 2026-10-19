@@ -1,8 +1,10 @@
 # Phase 1C — native build and runtime evidence
 
-Status: **IN PROGRESS**. GN generation is verified. Compilation has been started
-but has not completed. No application launch or browser functionality is claimed.
-Phase 2 remains gated.
+Status: **PARTIAL — memory-blocked**, verified 2026-10-19. GN generation passed,
+and the missing Metal compiler was installed and its failing action recovered.
+The latest two-job attempt completed 16,212 steps before the resource guard
+interrupted it. The full browser target is incomplete. No application launch or
+browser functionality is claimed. Phase 2 remains gated.
 
 ## Readiness and source identity
 
@@ -86,7 +88,8 @@ only its own process group, then escalates termination if needed to preserve saf
 Policy: stop at or below 60 GiB external free (buffer above the 50 GiB floor),
 10 GiB internal free, critical pressure, or 4 GiB additional swap. At four jobs,
 60 seconds of warning pressure requests a two-job retry. At two jobs, warning
-pressure with at least 2 GiB additional swap for 180 seconds stops the attempt.
+pressure lasting 180 seconds plus a current swap increase of at least 2 GiB
+stops the attempt; the swap increase itself need not last 180 seconds.
 Old swap alone is not treated as evidence of new build-induced exhaustion.
 
 The first attempt stopped for sustained warning pressure during Siso graph
@@ -121,16 +124,61 @@ The installation log is `logs/phase1c-metal-install.log`.
 A third attempt resumed the same incremental output with **two local jobs**,
 unchanged GN arguments and the same executor/cache. Evidence:
 `logs/phase1c-build-4n1txr2_`. Starting external free space was
-278,919,000,064 bytes (259.76 GiB); baseline pressure remained 2 with approximately
-11.98 GiB swap. Its final outcome remains pending.
+278,934,351,872 bytes (259.78 GiB); baseline pressure remained 2 with approximately
+11.98 GiB swap. The previously failing ANGLE shader action completed at
+5m40.67s in this retry, verifying that the component installation resolved the
+original failure. C++/Rust compilation and generated resources then progressed.
+
+At **2026-10-19 08:37:08 UTC (14:37:08 Asia/Dhaka)** the guard interrupted this
+attempt for sustained warning pressure with swap growth above 2 GiB. Siso's final
+result was **1h48m37.25s, 16,212 done, zero failed, 53,054 remaining**, followed by
+`interrupt by signal`. Runner and Siso both exited 1. This was a resource safety
+stop, not a reported compiler failure. The attempt used local execution only:
+16,192 local steps, 20 no-exec steps, zero remote steps and zero cache hits.
+
+The 1,105 resource samples recorded pressure levels 1 and 2, with no observed
+critical level 4. Swap rose from 12,864,653,885 to 15,143,408,762 bytes: **2.12 GiB
+additional swap**, total **14.10 GiB** at the stop. Warning pressure was sustained;
+the final swap increase occurred shortly before the guard stopped the process.
+Sampling intervals reached **44 seconds**, so the five-second request is not a
+hard real-time guarantee. No volume replacement or storage-floor stop occurred.
+
+A fresh check at approximately **11:49 UTC (17:49 Asia/Dhaka)** still showed
+warning pressure 2 and **13.34 GiB total host swap**. No build/Siso/compiler process
+remained in the process check. The build was not blindly restarted under the
+continuing pressure. Close unnecessary memory-heavy applications or otherwise
+free host memory, then recheck pressure/headroom before resuming at two jobs.
+No unrelated user process was terminated and no system memory setting changed.
+
+## Storage consumption and preserved output
+
+The final external available space was **274,637,193,216 bytes (255.78 GiB)**,
+about **7.98 GiB lower** than the initial Phase 1C snapshot. This is the observed
+volume-wide change, not an attribution of every byte to the build. The third
+attempt's available-space change was about 4.02 GiB. The mandatory 50 GiB floor
+was maintained with substantial headroom.
+
+`du -sk` reported **5,233,176 KiB (4.99 GiB allocated)** for `out/TrinolDev` and
+zero allocated KiB for the external Siso cache. This is allocated disk usage,
+not the sum of logical file sizes; cache configuration does not guarantee cache
+hits or populated content. Outputs, source checkout and all attempt logs remain
+preserved. No cleanup, executor switch, source modification or GN-argument change
+was performed. The final checkout verifier again passed both pinned HEADs, tag,
+version, DEPS digest and tracked cleanliness.
 
 ## Artifact and launch checks
 
-No completed `Chromium.app` has been verified. Artifact architecture, executable
-permissions, bundle metadata, linked libraries, version and signing checks await
-a successful `chrome` build. A partial bundle must not be treated as a finished
-browser. The dedicated `test-profile` has not been used; personal Chrome profiles
-are outside scope.
+The directory `out/TrinolDev/Chromium.app` exists, but the expected executable
+`Chromium.app/Contents/MacOS/Chromium` **does not exist**. This is an incomplete
+bundle. Architecture, executable permissions, complete bundle metadata, linked
+libraries, runtime version and signing verification are **NOT TESTED** because
+there is no completed executable. `file`, `lipo`, `otool` and `codesign` checks on
+an absent browser would not establish artifact validity.
+
+Native launch and GUI checks were not attempted. `test-profile` does not exist;
+no personal Chrome profile was accessed. No browser crash result can be reported
+because no browser was launched. GUI tooling availability was not used as the
+blocker: compilation itself remains incomplete.
 
 ## Functional matrix
 
@@ -162,7 +210,7 @@ Set `BUILD_ROOT` to the approved external build root, then from product Git:
 ```bash
 python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --generate
 python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --jobs 4
-# Only after a pressure stop, preserve output and resume with:
+# After a four-job pressure stop, preserve output and resume with:
 python3 scripts/build_chromium_macos.py --build-root "$BUILD_ROOT" --jobs 2
 ```
 
@@ -171,7 +219,11 @@ unexpected configuration. The build command requires generated files, inspects
 effective GN arguments and verifies the browser target before compiling.
 Each attempt writes a unique directory beneath external `logs/`, with command
 output, resource samples, status and argument/target evidence. Do not rerun a
-second build while an attempt remains active.
+second build while an attempt remains active. After a two-job memory stop, first
+relieve host memory pressure and recheck capacity; do not repeatedly restart to
+reset the swap baseline. Symbol level remains 1 because the evidence does not
+establish symbol generation as the cause. The native linker/executor was not
+changed because no linker or Siso incompatibility was demonstrated.
 
 ## Repository checks and phase gate
 
@@ -199,3 +251,40 @@ Authenticated owner was verified as `A-K-M-Asifuzzaman`; existing author
 `git ls-remote origin refs/heads/main` matched the delivered SHA afterward.
 [Foundation Actions run 39212004908](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39212004908)
 completed successfully. This CI checks repository tooling, not the native browser.
+
+The documentation/recovery milestone is
+`74f4d0c29562edbd7df592a2c09ccbec6cfc9a6a` —
+`docs: record Phase 1C GN and Metal toolchain recovery`.
+Remote `main` matched this commit and
+[Actions run 39212323138](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39212323138)
+passed. The final partial-result update is a subsequent normal commit; its exact
+SHA, remote verification and Actions result are reported in the delivery response.
+
+## Product repository changes
+
+- Added `scripts/build_chromium_macos.py` and `tests/test_build_chromium_macos.py`.
+- Updated `scripts/verify_upstream_checkout.py` and its test file with Phase 1C
+  completion gates; incomplete build/runtime evidence cannot mark Phase 1C complete.
+- Updated `AGENTS.md` and `.github/workflows/foundation.yml` for authorized scope
+  and repository-tooling checks without attempting Chromium compilation in CI.
+- Updated `README.md`, `docs/roadmap.md`, `docs/upstream-workflow.md` and
+  `upstream/manifest.json`; added this report.
+- No source checkout, executable, object, cache, profile, local log, credential or
+  signing material was staged. Staged file-type/known-credential-pattern scans
+  complement manual diff review; they are not an exhaustive secret detector.
+
+## Final verdict and Phase 2 prerequisites
+
+**PARTIAL.** The native build is recoverable and the Metal issue is resolved,
+but sustained host memory pressure stopped the two-job attempt. The 18 GiB host,
+pre-existing swap usage and slow external file I/O remain practical constraints.
+The resource guard is sampled and cannot guarantee instant response during I/O
+stalls. No Chromium feature compatibility, production performance, distribution
+signing or browser security runtime result is inferred from repository CI.
+
+Phase 2 is **not ready**. Relieve host pressure, resume the preserved two-job
+build, obtain a successful full `chrome` exit, verify the actual arm64 bundle,
+launch with the dedicated profile, and complete the feasible functional matrix.
+Then obtain architect review and explicit Phase 2 authorization.
+
+PHASE 1C PARTIAL/BLOCKED — AWAITING ARCHITECT REVIEW

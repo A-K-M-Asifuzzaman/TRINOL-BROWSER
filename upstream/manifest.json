@@ -49,7 +49,7 @@
   "proposed_gn_args": "config/macos-arm64.args.gn.example",
   "build": {
     "phase": "1c",
-    "status": "in_progress",
+    "status": "partial",
     "output_directory": "out/TrinolDev",
     "target": "chrome",
     "executor": "siso",
@@ -73,7 +73,28 @@
       "exit_code": 1,
       "completed_steps": 1051,
       "failure": "Missing Xcode Metal Toolchain in ANGLE shader compilation",
-      "correction": "Installed Apple Metal Toolchain 17F42; xcrun metal --version succeeds"
-    }
+      "correction": "Installed Apple Metal Toolchain 17F42; xcrun metal --version succeeds",
+      "correction_verified": true
+    },
+    "last_attempt": {
+      "date": "2026-10-19",
+      "exit_code": 1,
+      "stop_reason": "memory_pressure",
+      "completed_steps": 16212,
+      "failed_steps": 0,
+      "remaining_steps": 53054,
+      "elapsed_seconds": 6517.25,
+      "baseline_swap_bytes": 12864653885,
+      "stop_swap_bytes": 15143408762,
+      "stop_pressure_level": 2,
+      "evidence_directory": "logs/phase1c-build-4n1txr2_"
+    },
+    "artifact": {
+      "bundle_directory_exists": true,
+      "browser_executable_exists": false,
+      "output_allocated_bytes": 5358772224
+    },
+    "final_available_external_bytes": 274637193216,
+    "resume_requirement": "Relieve host memory pressure, recheck resource headroom, then resume the preserved output at two jobs"
   }
 }

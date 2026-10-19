@@ -137,7 +137,9 @@ with `xcodebuild -downloadComponent MetalToolchain -exportPath "$BUILD_ROOT/meta
 then verify `xcrun metal --version`. Xcode manages the installed component location.
 The runner verifies pins and APFS capacity, preserves matching GN arguments,
 checks resolved values, keeps Siso's cache external and stops on unsafe resource
-conditions. Never run concurrent builds against the same output. See the
+conditions. Never run concurrent builds against the same output. If the two-job attempt also
+stops for memory pressure, relieve the host pressure before retrying; do not
+reset the swap baseline repeatedly to work around the safety guard. See the
 [Phase 1C report](phase-1c-build-report.md) for commands, failures and actual results.
 
 Only after the entire `chrome` target finishes successfully, validate the bundle

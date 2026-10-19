@@ -4,9 +4,10 @@ Trinol Browser is a planned native Chromium fork by TrinolIT: macOS arm64 first,
 then Windows and Linux. It will retain Chromium's browser services while adding
 TrinolIT branding and a distinct native interface. No browser is implemented yet.
 
-**Phase 1C is in progress:** the pinned native Chromium foundation passed GN
-generation. A guarded local compilation is underway; no completed browser build
-or launch is claimed. The source and toolchain remain pinned to Phase 1B.
+**Phase 1C is partial:** GN generation passed and a missing Metal compiler was
+installed. The two-job build completed 16,212 steps in its latest attempt before
+the memory guard stopped it. Incremental output is preserved; no completed browser
+or launch is claimed. Source/tool pins remain unchanged.
 
 This repository contains Trinol-owned changes, documentation, configuration
 examples and validation. The Chromium checkout, depot_tools and build outputs
