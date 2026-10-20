@@ -144,6 +144,47 @@
       }
     },
     "compilation_status": "complete",
-    "native_process_started": true
+    "native_process_started": true,
+    "runtime_recovery_checkpoint": {
+      "phase": "1c-r2",
+      "status": "blocked_host_recovery_required",
+      "time_utc": "2026-10-20T18:08:19Z",
+      "evidence_directory": "logs/phase1cr2-host-qy8pb5u3",
+      "boot_time_unix": 1790097734,
+      "restart_since_previous_runtime_test": false,
+      "uninterruptible_processes": [
+        {
+          "pid": 30458,
+          "start_time_utc": "2026-10-20T12:22:33Z",
+          "state": "UEs"
+        },
+        {
+          "pid": 32662,
+          "start_time_utc": "2026-10-20T12:23:57Z",
+          "state": "UE"
+        },
+        {
+          "pid": 32663,
+          "start_time_utc": "2026-10-20T12:23:57Z",
+          "state": "UE"
+        },
+        {
+          "pid": 32670,
+          "start_time_utc": "2026-10-20T12:23:57Z",
+          "state": "UE"
+        }
+      ],
+      "process_identity_check": "Executable paths, full command lines, start times, profile arguments and process group matched the earlier test; PIDs alone are not ownership evidence",
+      "pressure_level": 2,
+      "swap_used_mib": 8744.69,
+      "available_external_bytes": 264657342464,
+      "available_internal_bytes": 78269362176,
+      "mount_device": "disk10s2",
+      "mount_volume_uuid": "47F505A1-126A-4EC6-8DB6-135813AA6111",
+      "new_browser_launches": 0,
+      "signals_sent": 0,
+      "root_cause_confirmed": false,
+      "required_action": "Normal user-controlled macOS restart, then revalidate host health and mount identity before continuing runtime investigation; preserve the successful build"
+    }
   }
 }

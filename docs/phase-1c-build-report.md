@@ -1,9 +1,10 @@
 # Phase 1C — native build and runtime evidence
 
-Current Phase 1C-R verdict: **PARTIAL — compiled successfully; runtime blocked**,
-verified 2026-10-20. The full target exited 0 and its arm64 executable is verified.
+Current Phase 1C-R2 verdict: **BLOCKED — host recovery has not occurred**,
+checked 2026-10-21 Asia/Dhaka (2026-10-20 UTC). Compilation remains successful.
+The original browser and three helpers still have uninterruptible exit states.
 Responsive launch and functional checks remain unverified. See the appended
-Phase 1C-R result for runtime diagnostics and the user-controlled recovery step.
+Phase 1C-R2 checkpoint for evidence and the required user-controlled restart.
 Phase 2 remains gated.
 
 The following earlier history is preserved: Phase 1C was **PARTIAL — memory-blocked**
@@ -616,3 +617,135 @@ passing. Final documentation delivery verification accompanies this report.
 Repository CI is not evidence that browser runtime checks passed.
 
 PHASE 1C RECOVERY PARTIAL/BLOCKED — AWAITING ARCHITECT REVIEW
+
+## Phase 1C-R2 — host recovery gate blocked — 2026-10-21 Asia/Dhaka
+
+**BLOCKED at the mandatory host recovery gate; Phase 1C remains PARTIAL.**
+The R2 instruction says to stop if uninterruptible Chromium processes remain.
+No new browser instance, executable version command, GUI inspection, headless
+test, process signal, rebuild or signing change was attempted. The successful
+39,487-step compilation and all previous runtime evidence remain preserved.
+Only this report and the manifest's new R2 checkpoint are changed.
+
+### Host and process evidence
+
+At **2026-10-20 18:08:19 UTC / 2026-10-21 00:08:19 Asia/Dhaka**, uptime was
+28 days, 46 minutes. Boot time is Unix `1790097734`, September 22 at 23:22:14
+Asia/Dhaka, before the failed October 20 runtime test. The Mac has not restarted.
+
+| PID | Start time (Asia/Dhaka, October 20) | State | Verified identity |
+| --- | --- | --- | --- |
+| 30458 | 18:22:33 | UEs | Built Chromium executable, original external test-profile, PGID 30458 |
+| 32662 | 18:23:57 | UE | Built Aperitif helper, GPU process, same profile and group |
+| 32663 | 18:23:57 | UE | Built Aperitif helper, network service, same profile and group |
+| 32670 | 18:23:57 | UE | Built Aperitif helper, storage service, same profile and group |
+
+All four executable paths resolve in the command lines to the original
+`/Volumes/ssd(mac)2/TrinolBuild/chromium/src/out/TrinolDev/Chromium.app` tree.
+PID, full command line, start time, parent and process group were inspected
+together; this is not a PID-only match. Browser start time matches `launch.json`.
+The earlier `cleanup.json` records these same four stuck processes after SIGTERM.
+`U` means uninterruptible wait and `E` means trying to exit in the local `ps(1)`
+manual. The unresolved host/process condition is **CONFIRMED**; its underlying
+kernel or application cause is not established.
+
+Crashpad PIDs 32638 and 32640 also remain, both starting at 18:23:56 from this
+build's framework. PID 32638 was running at 91.5–96.1% CPU across two snapshots;
+32640 was sleeping at 0%. Their command lines specify the default user-library
+Chromium Crashpad database, not the disposable browser profile. No database
+contents were inspected and neither process was signalled. Future test isolation
+must account for Crashpad's database separately from `--user-data-dir`.
+
+Memory pressure is **2 (warning)**; swap used is **8,744.69 MiB (8.54 GiB)**.
+Available storage is **246.48 GiB external** and **72.89 GiB internal**.
+The mount is case-sensitive APFS at `/Volumes/ssd(mac)2`, volume UUID
+`47F505A1-126A-4EC6-8DB6-135813AA6111`, currently `disk10s2` in container
+`disk10`, physical store `disk6s2`. Earlier preflight recorded `disk7s2` with the
+same physical-store identifier, but no UUID. Therefore uninterrupted mount
+identity is not proven; device-number changes alone do not establish replacement
+or the cause of the hang. Revalidate identity after restart.
+
+Shell probes and evidence reads returned promptly. WindowServer PID 454 has
+remained running since September 22; observed CPU was 8.2–22.2%. These snapshots
+do not prove GUI responsiveness or rule out GPU/WindowServer/filesystem faults.
+Deeper system-log, crash-report and main-thread diagnostics were deferred at the
+explicit stop gate. No Siso/compiler process was observed in the process snapshot.
+
+Fresh evidence is outside product Git:
+`/Volumes/ssd(mac)2/TrinolBuild/logs/phase1cr2-host-qy8pb5u3/host-check.json`
+and `mount-check.json`. The first `diskutil info` call used the build subdirectory
+and exited 1; the corrected mount-point call succeeded. Both outcomes are
+retained. Existing `logs/phase1c-runtime-v5u4akhv` files were read, not modified.
+
+### Artifact and suspected causes at this stop gate
+
+The earlier artifact evidence confirms a 35,008-byte arm64 component launcher,
+valid plist, version 155.0.8059.85 and identifier `org.chromium.Chromium`.
+It records framework/libc++ dependencies and ad hoc linker signing. These are
+prior observations, not a fresh comprehensive R2 artifact verification.
+Framework/resource completeness, symlinks, xattrs/quarantine and pinned signing
+rules still require investigation after host recovery.
+
+| Diagnostic | Classification | Evidence and limit |
+| --- | --- | --- |
+| Signing-clone cross-device failure | CONFIRMED occurrence; POSSIBLE contributor | Prior browser logs show `clonefile` from the external app to internal translocation storage failing with errno 18 at `code_sign_clone_manager.mm:326`. Caller/fallback behavior and causal connection remain unresolved. |
+| Duplicate Objective-C classes | CONFIRMED occurrence; POSSIBLE contributor | Logs name `ANGLESwapCGLLayer` in libgl_init/libblink_modules and `CrashpadHTTPBodyStreamTransport` in libbrowser_ui_views/libchrome_dll. Source definitions, expected component behavior and search-path correctness are not yet established. |
+| Strict bundle verification failure | CONFIRMED occurrence; POSSIBLE contributor | Prior `codesign --verify --deep --strict` exited 1 with missing-resource-seal diagnostics. This does not prove launch failure or justify re-signing. |
+| Persistent uninterruptible browser/helpers | CONFIRMED current blocker | Start-time/path/profile/group matches and current UE states; no successful cleanup or host restart. |
+
+None of the three logged diagnostics is promoted to a confirmed hang cause.
+The prior 45-second headless timeout occurred while the failed GUI instance
+remained; it is not an independent test proving that the binary cannot start.
+No source, GN, dependency, security or launch workaround is justified by this
+checkpoint. No new runtime utility or regression test is needed for this
+documentation-only stop decision.
+
+### Full runtime matrix
+
+`NOT TESTED` below means no functional evidence, including no new R2 attempt.
+The startup/lifecycle failure carries forward the earlier attempted test.
+
+| # | Feature | Result | Evidence |
+| --- | --- | --- | --- |
+| 1 | Browser startup and shutdown | FAIL | Earlier GUI inspection timed out; same browser/helpers still UE |
+| 2 | HTML rendering | NOT TESTED | Host recovery gate |
+| 3 | JavaScript execution | NOT TESTED | Host recovery gate |
+| 4 | HTTPS navigation | NOT TESTED | Host recovery gate |
+| 5 | Multiple tabs | NOT TESTED | Host recovery gate |
+| 6 | Back, forward and reload | NOT TESTED | Host recovery gate |
+| 7 | Second window | NOT TESTED | Host recovery gate |
+| 8 | Incognito | NOT TESTED | Host recovery gate |
+| 9 | Bookmarks | NOT TESTED | Host recovery gate |
+| 10 | History | NOT TESTED | Host recovery gate |
+| 11 | Test download | NOT TESTED | Host recovery gate |
+| 12 | Downloads management | NOT TESTED | Host recovery gate |
+| 13 | Settings | NOT TESTED | Host recovery gate |
+| 14 | Extensions management | NOT TESTED | Host recovery gate |
+| 15 | Local PDF rendering | NOT TESTED | Host recovery gate |
+| 16 | Print preview | NOT TESTED | Host recovery gate |
+| 17 | Permission prompts | NOT TESTED | Host recovery gate |
+| 18 | Session restoration | NOT TESTED | Host recovery gate |
+| 19 | Browser version at runtime | NOT TESTED | Metadata matches; prior page attempt timed out without DOM |
+| 20 | Sandbox/security status | NOT TESTED | No bypasses used; runtime enforcement not verified |
+
+### Required recovery and delivery
+
+Save open work and perform a **normal user-controlled macOS restart**.
+No automatic restart is authorized or performed. Then confirm a newer boot time,
+absence of the old process identities, acceptable memory pressure, APFS volume
+identity and storage headroom before continuing R2 artifact/source diagnosis.
+Only after that gate passes, run isolated sequential tests with fresh profiles,
+tracked process start times and bounded observation/cleanup. Preserve compiled
+outputs; do not rebuild merely because runtime failed.
+
+Before these edits, `git fetch origin main` succeeded and both local and remote
+tracking HEAD were `987d91af099aaa9ec5701cd66a22e0e45bcb7917`, with a clean tree.
+Authenticated owner `A-K-M-Asifuzzaman` and configured author
+`Asif Zman <138548302+asif4762@users.noreply.github.com>` were verified and retained.
+All **113 offline tests pass** for this checkpoint. Foundation validation,
+Python compilation, shell syntax and `git diff --check` also pass. No new test
+logic was added; no real compiler or browser was started by these offline tests.
+The commit, push and Actions results accompany delivery.
+Phase 2 is not ready and has not started.
+
+PHASE 1C-R2 PARTIAL/BLOCKED — RUNTIME DIAGNOSIS REPORTED — AWAITING ARCHITECT REVIEW
