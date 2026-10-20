@@ -432,3 +432,33 @@ The earlier progress checkpoint was delivered in
 Remote main matched and [Actions run 39289887406](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39289887406)
 passed. Compilation, native launch and functional smoke-test completion remain
 unverified; Phase 1C remains PARTIAL and Phase 2 has not started.
+
+### Recovery checkpoint — 12:56 Asia/Dhaka, 2026-10-20
+
+The original one-job recovery attempt continued through the night. At
+06:56:59 UTC, after about 18h28m, Siso reported 31,658 completed actions and
+10,021 remaining. Its scheduled graph had changed to 41,679 actions; these
+counts are not a permanent total-project progress percentage. The full command
+log still contained zero `FAILED:` action markers and zero `warning:` diagnostic
+lines. There is no final exit code yet.
+
+Across 13,097 resource samples, observed pressure levels remained 1 and 2, peak
+new swap remained 1.245 GiB, the longest interval remained 41.20 seconds, and the
+sustained-deterioration timer never started. At this checkpoint, pressure was 2,
+new swap was 0.880 GiB, and available space was 248.18 GiB external and 63.55 GiB
+internal. Minimum space during the attempt was 248.18 GiB external and 60.98 GiB
+internal. The same guard continues to permit compilation.
+
+Chromium and depot_tools HEADs still match their pinned revisions. The `args.gn`
+SHA-256 and `build.ninja` size/modification time still match the pre-recovery
+records. The original process remains active, with no second build, GN
+regeneration or configuration change. An earlier process-tree snapshot at about
+22:02 UTC on October 19 observed one `clang++` worker at 88.3% CPU, confirming
+compiler activity beyond the limited process-group metric described above.
+
+The preceding checkpoint was delivered as
+`64bcdcf3056a2687b0e3a62f0a06a9d5efcf103b` —
+`docs: record nine-hour Chromium recovery checkpoint`.
+Remote main matched and [Actions run 39331479613](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39331479613)
+passed. Browser artifact, native launch and functional verification remain
+pending full target completion. Phase 1C remains PARTIAL; Phase 2 is not ready.
