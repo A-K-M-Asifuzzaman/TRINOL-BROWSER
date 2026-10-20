@@ -1,11 +1,16 @@
 # Phase 1C — native build and runtime evidence
 
-Prior Phase 1C verdict: **PARTIAL — memory-blocked**, verified 2026-10-19.
-Current Phase 1C-R recovery evidence is appended below. GN generation passed,
-and the missing Metal compiler was installed and its failing action recovered.
-The latest two-job attempt completed 16,212 steps before the resource guard
-interrupted it. The full browser target is incomplete. No application launch or
-browser functionality is claimed. Phase 2 remains gated.
+Current Phase 1C-R verdict: **PARTIAL — compiled successfully; runtime blocked**,
+verified 2026-10-20. The full target exited 0 and its arm64 executable is verified.
+Responsive launch and functional checks remain unverified. See the appended
+Phase 1C-R result for runtime diagnostics and the user-controlled recovery step.
+Phase 2 remains gated.
+
+The following earlier history is preserved: Phase 1C was **PARTIAL — memory-blocked**
+on 2026-10-19. GN generation passed, and the missing Metal compiler was installed
+and its failing action recovered. The two-job attempt completed 16,212 steps
+before the resource guard interrupted it. At that checkpoint the full browser
+target was incomplete and no application launch or browser functionality was claimed.
 
 ## Readiness and source identity
 
@@ -462,3 +467,152 @@ The preceding checkpoint was delivered as
 Remote main matched and [Actions run 39331479613](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39331479613)
 passed. Browser artifact, native launch and functional verification remain
 pending full target completion. Phase 1C remains PARTIAL; Phase 2 is not ready.
+
+## Phase 1C-R result — compilation complete, runtime blocked — 2026-10-20
+
+**Verdict: PARTIAL.** The primary incremental compilation objective succeeded.
+The unchanged `chrome` target exited **0** after **23h51m20.23s**, with Siso's
+final summary reporting **39,487 completed steps**. There were no failed-action
+markers or compiler-warning lines in the build log. Local execution remained
+one job, remote execution remained zero, and all previously compiled output was
+preserved. No GN regeneration, source change, executor switch or second build
+was needed. The executable is now present, but responsive native launch and
+functional verification are blocked as detailed below.
+
+### Final build and resource evidence
+
+The command remained:
+
+```bash
+python3 scripts/build_chromium_macos.py --build-root '/Volumes/ssd(mac)2/TrinolBuild' --jobs 1
+```
+
+The runner and child both returned 0. The log ends with `Build Succeeded: 39487
+steps - 0.46/s`. Its executor statistics report `noexec:632 local:38855 remote:0
+cache:0 skip:47494`; these categories are not added to prior attempts as a
+permanent project percentage. Siso also reports filesystem-operation errors in
+its internal statistics (`fs ops ... err:107145`), but read/write error counts
+are zero and the executor's final outcome is success. This is disclosed without
+treating internal operation counters as failed compilation actions.
+
+Across **16,911** samples, pressure levels were 1 and 2, with no observed critical
+level 4. Peak new swap was **1.388 GiB**; the final sample was **1.015 GiB** above
+the 12.82 GiB starting baseline. The deterioration timer stayed zero. Minimum
+available space during compilation was **247.03 GiB external** and **60.98 GiB
+internal**; the longest sampling interval was **41.20 seconds**. Monitoring was
+sampled, not real-time. Later runtime diagnostics observed about 238.60 GiB
+external and 69.17 GiB internal free; these later host readings are not attributed
+solely to the build. `du -sk` reported 13,501,524 KiB (12.88 GiB) allocated to
+`out/TrinolDev` and 534,808 KiB to the disposable profile tree.
+
+The original runner status retained stale live counters (four remaining) even
+though its exit/outcome correctly recorded success. The observed Siso success
+format differs from its failure summary. The parser now recognizes the actual
+success line, reports 39,487 completed / zero failed / zero remaining, and drops
+the obsolete scheduled-graph total. A regression test reproduces the exact log
+shape. **113 offline tests pass**, including all resource safeguards. Original
+logs/status remain untouched; a separately parsed final summary is preserved.
+
+Build evidence remains `logs/phase1c-build-dbqart3q`. Runtime and corrected
+summary evidence is `logs/phase1c-runtime-v5u4akhv`, including
+`build-final-summary.json`, `artifact-checks.json`, `launch.json`, `browser.log`,
+`version.stderr.log`, `runtime-result.json`, and `cleanup.json`. These local
+artifacts, profiles and binaries are not committed to the product repository.
+
+### Artifact inspection and actual launch attempt
+
+- `Chromium.app/Contents/MacOS/Chromium` exists, is executable, and is a 35,008-byte
+  Mach-O arm64 launcher. The component framework/libraries are separate outputs.
+- `file` and `lipo -archs` confirm native arm64. `plutil -lint` passes.
+- Bundle identifier is `org.chromium.Chromium`, short version is
+  **155.0.8059.85**, bundle version is `8059.85`, minimum macOS is 13.0.
+- `otool -L` records the Chromium framework, `libc++_chrome.dylib`, and system
+  library dependencies. Runtime logs demonstrate component-library loading, but
+  complete runtime dependency/behavior verification is not claimed.
+- `codesign -dv` reports **ad hoc, linker-signed**, with no team identifier or
+  sealed resources. `codesign --verify --deep --strict` exits 1: “code has no
+  resources but signature indicates they must be present.” No signing,
+  quarantine removal, sandbox bypass or notarization claim was added.
+
+The actual compiled executable was launched as PID 30458 with:
+
+```text
+--user-data-dir=/Volumes/ssd(mac)2/TrinolBuild/test-profile
+--no-first-run --no-default-browser-check chrome://version
+```
+
+Process inspection confirmed the exact compiled executable and renderer/helper
+paths. This proves process creation, not a responsive browser window. Computer
+Use full-path app inspection returned `timeoutReached` (-10005), including a
+bounded retry. Bundle-ID lookup was ambiguous with an unrelated installed
+Chromium; that other application was not selected or used.
+
+A separate CLI smoke attempt used the same binary, `--headless --dump-dom
+--timeout=15000 --allow-chrome-scheme-url chrome://version`, and the isolated
+`test-profile/headless-smoke` subprofile. It produced zero DOM bytes and exceeded
+a 45-second process deadline. SIGTERM then SIGKILL were sent only to that owned
+test group; exit waits also timed out, but PID 45076 was absent on subsequent
+inspection. The planned HTML/JavaScript and HTTPS checks did not execute after
+this first test aborted. No sandbox or TLS protection was disabled.
+
+Both runtime logs report duplicate Objective-C implementations of
+`ANGLESwapCGLLayer` and `CrashpadHTTPBodyStreamTransport`, a quarantine-attribute
+error, and a signing-clone `Cross-device link (18)` error when cloning from the
+external build volume to macOS's internal translocation directory. These are
+observed diagnostics, not an established root cause of the hang. Inspection of
+the pinned clone code shows an error-return path; no workaround was applied.
+
+The GUI browser and three helpers were later observed in `UE` state. The local
+macOS `ps(1)` manual defines `U` as uninterruptible wait and `E` as trying to
+exit. A bounded `sample` attempt returned -10 without creating a sample file.
+SIGTERM to the verified test-browser group removed its renderers, but the
+uninterruptible processes remained. Clean shutdown is therefore unverified.
+Only task-owned test processes were signalled; no unrelated apps were closed.
+
+### Recovery functional matrix
+
+| Check | Result | Evidence |
+| --- | --- | --- |
+| Full native `chrome` compilation | PASS | Child and runner exit 0; Siso success summary |
+| arm64 executable and bundle metadata | PASS | `file`, `lipo`, `plutil`; pinned version metadata |
+| Native process creation with dedicated profile | PASS | PID 30458 and exact build/profile paths |
+| Responsive GUI startup | FAIL / blocked | Computer Use timeout; browser later in `UE` state |
+| `chrome://version` runtime page | FAIL / timeout | Headless deadline; zero DOM bytes |
+| Clean shutdown | NOT VERIFIED | SIGTERM left uninterruptible test processes |
+| HTTPS navigation / HTML rendering | NOT TESTED | Smoke sequence stopped at version timeout |
+| JavaScript execution | NOT TESTED | Fixture prepared but browser check did not execute |
+| Multiple tabs / second window / back / forward / refresh | NOT TESTED | Responsive GUI unavailable |
+| Private browsing / private-state separation | NOT TESTED | Responsive GUI unavailable |
+| Bookmarks / history | NOT TESTED | Responsive GUI unavailable |
+| Test download / downloads interface | NOT TESTED | Responsive GUI unavailable |
+| Settings / extensions management | NOT TESTED | Responsive GUI unavailable |
+| Local PDF / print preview | NOT TESTED | Responsive GUI unavailable |
+| Site permission prompts | NOT TESTED | Responsive GUI unavailable |
+| Session restore | NOT TESTED | Clean shutdown and responsive GUI unavailable |
+| HTTPS security indicators / sandbox status | NOT TESTED | Protections retained; runtime status not verified |
+| Distribution bundle signature | FAIL | Strict verification exits 1; ad hoc development signing |
+
+### Next boundary and delivery
+
+No build restart is needed: preserve the successful output. Save open work and
+perform a normal **user-controlled macOS restart** before another runtime
+attempt if these uninterruptible processes remain. No restart is executed by
+this task. Then recheck host/storage health and investigate the runtime/signing
+diagnostics without weakening protections or changing upstream source blindly.
+Repeat dedicated-profile native launch and feasible functional checks after
+the host/process blocker is cleared.
+
+Phase 1C remains PARTIAL and Phase 2 is **not ready**. The manifest records
+compilation separately from responsive launch and smoke-test completion. No
+Trinol branding, UI customization, AI feature or Phase 2 work was started.
+
+The preceding checkpoint commit was
+`4bcd502846a29632341074411f5cd68510f92f1f`, with remote main matched and
+[Actions run 39383518583](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39383518583)
+passing. The success-summary parser fix is
+`9857171ef7d2a7739f221ee0308540e9464bb531`, with remote main matched and
+[Actions run 39463750154](https://github.com/A-K-M-Asifuzzaman/TRINOL-BROWSER/actions/runs/39463750154)
+passing. Final documentation delivery verification accompanies this report.
+Repository CI is not evidence that browser runtime checks passed.
+
+PHASE 1C RECOVERY PARTIAL/BLOCKED — AWAITING ARCHITECT REVIEW

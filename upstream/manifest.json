@@ -28,7 +28,7 @@
     "processed_sync_entries": 240,
     "git_dependency_heads_verified": 151,
     "gn_generated": true,
-    "chromium_compiled": false
+    "chromium_compiled": true
   },
   "toolchain": {
     "host_os": "mac",
@@ -91,14 +91,20 @@
     },
     "artifact": {
       "bundle_directory_exists": true,
-      "browser_executable_exists": false,
-      "output_allocated_bytes": 5358772224
+      "browser_executable_exists": true,
+      "output_allocated_bytes": 13825560576,
+      "architecture": "arm64",
+      "executable_permission": true,
+      "bundle_metadata_valid": true,
+      "version": "155.0.8059.85",
+      "signing": "adhoc linker-signed",
+      "strict_signature_valid": false
     },
-    "final_available_external_bytes": 274637193216,
-    "resume_requirement": "After any resource stop, recheck idle trends and headroom before resuming the preserved output at one job",
+    "final_available_external_bytes": 256197001216,
+    "resume_requirement": "Do not rebuild. Resolve the uninterruptible test-process/host state with user-controlled recovery, then investigate runtime diagnostics and repeat dedicated-profile launch without security bypasses.",
     "recovery": {
       "phase": "1c-r",
-      "status": "in_progress",
+      "status": "runtime_blocked",
       "jobs": 1,
       "evidence_directory": "logs/phase1c-build-dbqart3q",
       "preflight_directory": "logs/phase1cr-preflight-fpqndvnb",
@@ -111,13 +117,33 @@
       "idle_swap_growth_mib": 0,
       "guard_revision": "9ef87587af9cd6b828dad5dbd2baf67deb5cf05c",
       "checkpoint": {
-        "time_utc": "2026-10-20T06:56:59Z",
-        "state": "running",
-        "attempt_completed_steps": 31658,
-        "attempt_remaining_steps": 10021,
+        "time_utc": "2026-10-20T12:20:00Z",
+        "state": "finished",
+        "exit_code": 0,
+        "outcome": "completed",
+        "attempt_completed_steps": 39487,
+        "attempt_remaining_steps": 0,
         "failed_action_markers_observed": 0,
-        "compilation_complete": false
+        "compilation_complete": true
+      },
+      "elapsed_seconds": 85880.23,
+      "runtime_evidence_directory": "logs/phase1c-runtime-v5u4akhv",
+      "runtime": {
+        "native_process_started": true,
+        "responsive_gui_verified": false,
+        "version_page_verified": false,
+        "headless_version_result": "timeout",
+        "clean_shutdown_verified": false,
+        "blocker": "GUI inspection timed out; headless version produced no DOM within 45 seconds; GUI process/helpers remained in uninterruptible exit state after SIGTERM",
+        "diagnostics": [
+          "duplicate Objective-C classes",
+          "signing-clone cross-device link error",
+          "strict bundle-signature verification failure"
+        ],
+        "root_cause_confirmed": false
       }
-    }
+    },
+    "compilation_status": "complete",
+    "native_process_started": true
   }
 }
