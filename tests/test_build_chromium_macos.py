@@ -180,6 +180,16 @@ class FilesystemTests(unittest.TestCase):
         p = b.read_progress(log)
         self.assertEqual((p['completed_steps'], p['failed_steps'], p['remaining_steps']), (10, 0, 90))
 
+    def test_siso_success_summary_supersedes_incomplete_live_counters(self):
+        log = self.root/'command.log'
+        log.write_text('[39486/39490] 23h51m17.50s F COPY_BUNDLE_DATA framework\n'
+                       '23h51m20.23s Build Succeeded: 39487 steps - 0.46/s\n'
+                       '    39487 build steps completed, average of 0.46/s\n')
+        p = b.read_progress(log)
+        self.assertEqual((p['completed_steps'], p['failed_steps'], p['remaining_steps']),
+                         (39487, 0, 0))
+        self.assertNotIn('scheduled_steps', p)
+
     def monitor(self, memories, child, times=(0, 5), mount_failure=None):
         volume = SimpleNamespace(mount=str(self.root))
         stat = SimpleNamespace(f_bavail=100, f_frsize=b.GIB)

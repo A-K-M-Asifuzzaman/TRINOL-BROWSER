@@ -123,6 +123,10 @@ def read_progress(path):
     if summary:
         done, failed, remaining = map(int, summary[-1])
         result.update(completed_steps=done, failed_steps=failed, remaining_steps=remaining)
+    success = re.findall(r'Build Succeeded: (\d+) steps\b', tail)
+    if success:
+        result.update(completed_steps=int(success[-1]), failed_steps=0, remaining_steps=0)
+        result.pop('scheduled_steps', None)
     warnings = [line[-500:] for line in tail.splitlines() if 'warning:' in line.lower()]
     result['last_warning_in_tail'] = warnings[-1] if warnings else None
     return result
