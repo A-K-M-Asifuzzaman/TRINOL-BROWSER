@@ -174,6 +174,16 @@ class LifecycleTests(unittest.TestCase):
         result, _ = self.simulate(delay=True)
         self.assertEqual(result['failure'], 'observation_delayed')
 
+    def test_delayed_sample_does_not_quit_during_startup(self):
+        now = [0]
+        calls = []
+        process = Mock(pid=123, poll=Mock(return_value=None))
+        def sleep(_): now[0] += 20
+        life.supervise(process, self.profile, self.root, 45, 30,
+            lambda: [self.row()], Mock(), lambda *_: calls.append(now[0]),
+            clock=lambda: now[0], sleep=sleep)
+        self.assertEqual(calls, [60])
+
     def test_quit_error_is_not_pass(self):
         result, quit_app = self.simulate(quit_error=True)
         self.assertEqual(result['failure'], 'native_quit_failed')

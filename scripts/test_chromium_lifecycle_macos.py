@@ -203,7 +203,6 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
                     # A transient U state blocks future trials, but must not
                     # trigger Quit before this instance finishes starting.
                     if result['failure'] in ('supervisor_interrupted',
-                                             'observation_delayed',
                                              'unexpected_compiled_app_process'):
                         deadline = min(deadline, now)
                         next_quit = min(next_quit, now)
