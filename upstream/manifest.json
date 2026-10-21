@@ -101,7 +101,7 @@
       "strict_signature_valid": false
     },
     "final_available_external_bytes": 256197001216,
-    "resume_requirement": "R4 remains partial. Review the preserved dump analysis, aggregate shutdown budget and corrected supervisor before approving another fresh-profile run. Keep the lifecycle failure marker; do not rebuild or begin Phase 2.",
+    "resume_requirement": "R5 retry consumed: actual browser exit 0 and helper cleanup, but 36.95-second startup observation gap failed acceptance. Preserve R4 archive and active R5 marker; review monitor/evidence-write latency before any separately authorized retry. No rebuild or Phase 2.",
     "recovery": {
       "phase": "1c-r",
       "status": "runtime_blocked",
@@ -302,6 +302,59 @@
       "final_swap_used_mib": 3802.75,
       "final_physical_available_bytes": 270755524608,
       "phase_2_authorized": false
+    },
+    "runtime_recovery_r5": {
+      "phase": "1c-r5",
+      "status": "partial_observation_gap",
+      "date": "2026-10-21",
+      "report": "docs/phase-1c-r5-lifecycle-validation.md",
+      "evidence_directory": "logs/phase1cr5-lifecycle-iuh2y3f4",
+      "reviewed_r4_marker_sha256": "c2c2c21b47a933abcf91fc90aaa3573f3863fa6bc642ed7302deea5f2807ad5c",
+      "previous_marker_archive": "logs/TrinolLifecycle.r4-reviewed.json",
+      "retry_authorization": "User Phase 1C-R5 section 8; one reviewed trial, consumed",
+      "failure_marker": "logs/TrinolLifecycle.blocked.json",
+      "source_changed": false,
+      "compilation_run": false,
+      "runtime": {
+        "new_browser_launches": 1,
+        "workload": "blank",
+        "pid": 51860,
+        "profile_directory": "test-profile-r5-l2wwxb29",
+        "start_utc": "2026-10-21T17:32:08.153Z",
+        "requested_runtime_seconds": 45,
+        "requested_grace_seconds": 30,
+        "native_quit_accepted": true,
+        "native_quit_attempts": 1,
+        "quit_elapsed_seconds": 47.514251125001465,
+        "browser_exit_code": 0,
+        "browser_exit_observed_seconds": 49.519,
+        "elapsed_seconds": 49.69066849999945,
+        "supervisor_exit_code": 1,
+        "lifecycle_verdict": "FAIL",
+        "failure": "observation_delayed",
+        "longest_consecutive_sample_gap_seconds": 36.95249458399485,
+        "continuous_supervision_valid": false,
+        "uninterruptible_observed": true,
+        "persistent_uninterruptible_confirmed": false,
+        "watchdog_observed": false,
+        "new_dump_observed": false,
+        "remaining_processes": 0,
+        "cleanup_required": false,
+        "further_launches_blocked": true,
+        "browsing_session": "NOT TESTED"
+      },
+      "offline_test_count": 162,
+      "lifecycle_test_count": 49,
+      "final_native_state_correction_runtime_verified": false,
+      "underlying_r3_shutdown_cause": "UNRESOLVED",
+      "repeatable_bounded_shutdown_verified": false,
+      "phase_2_authorized": false,
+      "final_health": {
+        "pressure": 1,
+        "swap_bytes": 4969400893,
+        "physical_available_bytes": 270300246016,
+        "remaining_processes": 0
+      }
     }
   }
 }

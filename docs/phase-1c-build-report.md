@@ -1,14 +1,13 @@
 # Phase 1C — native build and runtime evidence
 
-Current Phase 1C-R4 verdict: **PARTIAL — R3 dump symbolicated; native bounded
-clean shutdown remains unverified**, observed 2026-10-21 Asia/Dhaka. The R3 main
-thread was waiting for GPU command-buffer destruction during compositor cleanup;
-the underlying cause is unresolved, including a competing aggregate-timeout
-explanation. R4's initial lifecycle harness failed on early native Quit refusal.
-Later menu cleanup removed all processes without a watchdog/dump, but no browser
-exit status was captured. The harness was corrected and tested offline; further
-launches remain blocked. See the [R4 investigation](phase-1c-r4-shutdown-investigation.md).
-Phase 2 remains gated. Earlier phase checkpoints are preserved below.
+Current Phase 1C-R5 verdict: **PARTIAL — actual native exit 0 captured, but
+bounded supervision acceptance failed**. The one approved blank-session retry
+accepted native Quit, reaped browser exit 0 and verified helper cleanup within
+49.69 seconds, without a watchdog or dump. A 36.95-second startup observation gap
+invalidated the lifecycle trial, so no browsing session or repetition followed.
+See the [R5 lifecycle report](phase-1c-r5-lifecycle-validation.md). The R4 marker
+is archived byte-for-byte, and the new R5 failure marker remains active. Phase 2
+is gated. Earlier phase checkpoints are preserved below.
 
 The following earlier history is preserved: Phase 1C was **PARTIAL — memory-blocked**
 on 2026-10-19. GN generation passed, and the missing Metal compiler was installed
@@ -1035,3 +1034,27 @@ Compilation remains complete and R3 responsive-browsing passes stand; clean
 shutdown and the remaining secondary checks are still gated on architect review.
 
 PHASE 1C-R4 PARTIAL — AWAITING ARCHITECT REVIEW
+
+## Phase 1C-R5 — native exit captured; supervision gate still partial
+
+The [R5 report](phase-1c-r5-lifecycle-validation.md) records the exact reviewed
+retry, native Quit audit, marker archive and lifecycle timeline. JXA property
+access correctly invokes the zero-argument terminate selector; registration,
+readiness, Boolean acknowledgment and process exit are now distinguished.
+Transient U states defer native operations, monitor failures retain child
+observation, and the original monotonic deadline remains fixed.
+
+The only browser trial returned actual browser exit **0**, accepted Quit at
+47.514 s and helper cleanup by 49.691 s, with no new watchdog or crash dump.
+However, a **36.952-second observation gap before Quit** made the overall result
+FAIL (supervisor exit 1). It cannot establish repeatable valid bounded shutdown.
+The new failure marker blocks more launches; the conditional browsing trial was
+not run. No browser remained after the test. R3's underlying watchdog cause
+remains unresolved; R5 did not reproduce a shutdown stall.
+
+All **162 offline tests pass**, including 49 lifecycle tests. The final small
+native-state race correction was not rerun against Chromium. No source, pin,
+GN, signing, security or compiled-output changes occurred. Next: investigate
+per-operation monitoring/evidence-write latency before another reviewed retry.
+
+PHASE 1C-R5 PARTIAL — AWAITING ARCHITECT REVIEW

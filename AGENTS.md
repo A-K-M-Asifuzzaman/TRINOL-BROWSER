@@ -22,6 +22,12 @@ repartitioning, global configuration changes, security bypasses or Trinol source
 customizations. Do not begin Phase 2 without explicit instruction. Distinguish
 compilation, executable launch and GUI/functional evidence.
 
+Phase 1C-R5 consumed its one reviewed retry. Preserve the archived R4 marker
+and the active R5 failure marker. Actual browser exit 0 was captured, but a startup
+observation gap invalidated the trial. No further native launch is authorized by
+R5. Review monitoring/evidence-write latency before a separately authorized retry;
+do not reuse the R4 recovery option or clear future failure markers automatically.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns
