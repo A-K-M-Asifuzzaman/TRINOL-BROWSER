@@ -1,11 +1,14 @@
 # Phase 1C — native build and runtime evidence
 
-Current Phase 1C-R2 verdict: **BLOCKED — host recovery has not occurred**,
-checked 2026-10-21 Asia/Dhaka (2026-10-20 UTC). Compilation remains successful.
-The original browser and three helpers still have uninterruptible exit states.
-Responsive launch and functional checks remain unverified. See the appended
-Phase 1C-R2 checkpoint for evidence and the required user-controlled restart.
-Phase 2 remains gated.
+Current Phase 1C-R3 verdict: **PARTIAL — responsive GUI and core browsing
+verified; clean shutdown failed**, observed 2026-10-21 Asia/Dhaka. The preserved
+native build ran successfully after a confirmed host restart. Native Quit later
+triggered Chromium's teardown watchdog and an isolated crash dump. All test
+processes were gone by 06:05:43 UTC, but that is not a clean-shutdown pass.
+See the appended R3 findings and 21-feature matrix. Phase 2 remains gated.
+
+The preceding R2 checkpoint was blocked because host recovery had not occurred;
+its original process evidence is preserved below.
 
 The following earlier history is preserved: Phase 1C was **PARTIAL — memory-blocked**
 on 2026-10-19. GN generation passed, and the missing Metal compiler was installed
@@ -749,3 +752,256 @@ The commit, push and Actions results accompany delivery.
 Phase 2 is not ready and has not started.
 
 PHASE 1C-R2 PARTIAL/BLOCKED — RUNTIME DIAGNOSIS REPORTED — AWAITING ARCHITECT REVIEW
+
+## Phase 1C-R3 — post-restart runtime findings (2026-10-21)
+
+### Verdict and recovery gate
+
+**PARTIAL.** The existing native Chromium now has direct responsive desktop,
+version, rendering and navigation evidence. Clean shutdown **failed**: the native
+Quit command reached teardown, its watchdog expired, and the browser terminated
+with a diagnostic dump. No new browser was launched after an uninterruptible
+state was observed. No termination signals were sent by this R3 investigation.
+
+At 2026-10-20 22:05:53 UTC (October 21 04:05:53 Asia/Dhaka), boot time was
+October 21 02:05:55 Asia/Dhaka (Unix 1792526755), newer than the previous failure.
+The former browser/helpers were absent; executable/profile/start-time inspection
+found no equivalent leftover compiled Chromium process. WindowServer and native
+UI inventory responded. Pressure was normal (1), swap used was 0 MiB, and
+internal free storage was approximately 89.57 GiB. The restart gate passed.
+
+The external mount remained writable, case-sensitive APFS at `/Volumes/ssd(mac)2`,
+UUID `47F505A1-126A-4EC6-8DB6-135813AA6111`, then disk7s2 in container disk7 with
+physical store disk6s2. Initial external availability was 274,790,305,792 bytes
+(255.92 GiB); the final check found 273,946,517,504 bytes (255.13 GiB), the same
+UUID/device, normal pressure and zero swap. Source, tools and outputs remained
+accessible. No disk or filesystem configuration was changed.
+
+### Artifact, source and configuration
+
+The existing checkout verifier passed again: Chromium
+`0e66b94549a8bd85f03fbdf189b752d6e7b63c32`, depot_tools
+`dca727ba1f8fa8f1e3b12a815d065818bb61d395`, version 155.0.8059.85, matching DEPS
+digest and clean tracked source. This did not rerun the historical dependency
+sync. The successful one-job build's exit 0 and 39,487 completed steps remain
+valid. No build, GN generation, source customization or tool upgrade occurred.
+Effective GN arguments remain those recorded above, including component build,
+arm64, `symbol_level=1`, `is_debug=false` and remote execution disabled.
+`args.gn` SHA-256 remained
+`cabeadd749736e664c312aca9303a57edd103c34fcc39d66d782128c4f44c1ab`.
+
+The 35,008-byte launcher is executable (0755), Mach-O arm64. Info.plist validates,
+identifies org.chromium.Chromium and version 155.0.8059.85. All five inspected
+framework symlinks resolve through Versions/Current to 155.0.8059.85; required
+PAKs, ICU data and the arm64 V8 snapshot exist. Direct `otool` dependencies of the
+framework and selected major component libraries resolve to the existing output
+or system paths. This was not an exhaustive recursive dependency/architecture
+audit. No DYLD_/LD_ overrides were present. Recursive native `xattr` inspection
+found no `com.apple.quarantine`; provenance attributes were left intact.
+
+### Investigation of earlier warnings
+
+All source references below refer to the pinned local Chromium checkout.
+
+- **Signing:** `codesign -dv --verbose=2` reports an ad hoc linker signature,
+  no TeamIdentifier, unbound Info.plist and no sealed resources. Strict deep
+  verification still exits 1: "code has no resources but signature indicates
+  they must be present". `chrome/BUILD.gn` and `build/config/mac/rules.gni`
+  construct this development component app without the full distribution
+  resource-sealing workflow. `chrome/installer/mac/signing/README.md` requires
+  a non-component build for distribution signing. The unchanged app rendered
+  successfully, so strict verification failure is not demonstrated as a startup
+  blocker here. Distribution readiness is not claimed; no re-signing or security
+  bypass was performed.
+- **Cross-volume clone — UNRELATED to blocking startup in this R3 run:**
+  `chrome/browser/chrome_browser_main_mac.mm` constructs CodeSignCloneManager.
+  `chrome/browser/mac/code_sign_clone_manager.mm` obtains an internal
+  `_dirhelper` user-local translocation directory under `/private/var/folders/`
+  and attempts `clonefile` from the external Chromium.app into its X directory.
+  EXDEV (18) is the expected cross-filesystem failure. `CloneApp` returns false;
+  the asynchronous manager cleans up and invokes its callback with an empty
+  path, allowing startup to continue. There is no copying fallback. The pinned
+  `FailedClone` unit test documents this failure path (read, not executed).
+  The quarantine-message context is this translocation directory; it does not
+  establish that the source app is quarantined. The clone supports code-signing
+  validation during app updates, not Crashpad. This warning recurred before the
+  successful GUI checks, which rules out treating its presence alone as a
+  startup-failure diagnosis. Its relationship to the old hang remains unproven.
+- **Duplicate classes — component linkage confirmed; causal relationship UNKNOWN:**
+  ANGLESwapCGLLayer comes from
+  `third_party/angle/src/libANGLE/renderer/gl/cgl/WindowSurfaceCGL.mm`.
+  Generated `init.ninja` and `modules.ninja` link the same WindowSurfaceCGL.o
+  into libgl_init.dylib and libblink_modules.dylib. CrashpadHTTPBodyStreamTransport
+  comes from `third_party/crashpad/crashpad/util/net/http_transport_mac.mm`;
+  generated `net.ninja` places its object in libnet.a, which is in both the
+  browser UI views and chrome_dll link inputs. Runtime warnings name these
+  libraries in the same output directory. This explains the duplicate origins
+  without evidence of a foreign library search path. It does not prove that
+  duplicates are harmless or caused either hang; no library was changed.
+- **Crashpad — previous high-CPU cause UNKNOWN:** `chrome/common/chrome_paths.cc`
+  intentionally derives crash storage from the default user-data directory,
+  independently of `--user-data-dir`. The supported `BREAKPAD_DUMP_LOCATION`
+  override in `chrome/app/chrome_crash_reporter_client.cc` supplies the dedicated
+  external location used by `components/crash/core/app/crashpad_mac.mm`.
+  Both new handler command lines confirm the isolated database. Observed handlers
+  slept at 0% CPU in the sampled windows; the old one-core spin did not recur in
+  those samples. Restart, new profile and isolation changed together, so no
+  single cause or cure can be inferred. Normal crash databases were not opened,
+  deleted or changed. The teardown dump was successfully saved in isolation.
+
+### One native launch and its observation limits
+
+Exact launch at 2026-10-20 22:09:35.767 UTC (04:09:35 Asia/Dhaka), PID/PGID 61136:
+
+```sh
+BREAKPAD_DUMP_LOCATION='/Volumes/ssd(mac)2/TrinolBuild/test-profile-r3-15a6r33u/Crashpad-isolated' \
+'/Volumes/ssd(mac)2/TrinolBuild/chromium/src/out/TrinolDev/Chromium.app/Contents/MacOS/Chromium' \
+  --user-data-dir='/Volumes/ssd(mac)2/TrinolBuild/test-profile-r3-15a6r33u' \
+  --no-first-run --no-default-browser-check about:blank
+```
+
+This is the already-executed command, not an instruction to relaunch. The profile
+was new and external. The only environment override was the supported dump
+location. No sandbox, web-security, certificate, permission or Gatekeeper bypass
+was introduced, and no normal browser profile or credentials were used.
+A scoped runner lock prevented overlapping controlled launches.
+
+Native accessibility trees and screenshots in the task conversation demonstrate
+the real Chromium desktop window and subsequent interactions. Early UI lookup
+returned process-not-found before registration; later lookup and interaction
+succeeded. This was a tooling/startup timing observation, not proof of failure.
+`chrome://version` displayed 155.0.8059.85 Developer Build arm64, V8 15.5.35.25,
+macOS 26.6.2, and the exact executable/profile paths above. Its embedded Revision
+field showed zero hashes; source identity is independently verified by Git,
+not by that missing runtime metadata.
+
+The initial observer stopped at 22:10:46 UTC after one browser `Us` sample.
+A following snapshot returned `Ss`, with GUI interaction still responsive.
+No second browser instance or signal was used. A separate read-only observer
+ran through the original 22:19:35 UTC observation deadline. CPU/process states
+and available memory observations are retained in the evidence files. These
+samples do not establish uninterrupted health throughout the session.
+
+There was a long gap between GUI work around 04:13 and continuation around
+12:01 Asia/Dhaka. The browser stayed open for about 7 hours 53 minutes, beyond
+the ten-minute observation window. This run was **not continuously monitored or
+bounded to ten minutes**. The observer had exited without reaping the eventual
+browser exit, so its numeric exit status is unknown. Future approved runtime
+work needs bounded lifecycle supervision as well as bounded observation; this
+ad hoc observer is not being promoted to a reusable tested harness.
+
+### Functional matrix and direct evidence
+
+PASS means only the behavior described in the evidence column. It does not
+imply comprehensive Chromium regression or security coverage.
+
+| Feature | Result | Direct evidence / limit |
+| --- | --- | --- |
+| Native startup | PASS | Native window, accessibility tree and repeated GUI interaction from the compiled app |
+| Clean shutdown | FAIL | Native Quit led to teardown watchdog expiry and a crash dump; details below |
+| Version verification | PASS | GUI version 155.0.8059.85 arm64 and exact executable/profile; Git pins verified separately |
+| Local HTML/CSS | PASS | Local fixture heading and green CSS panel visibly rendered |
+| JavaScript | PASS | Script changed DOM text to `PASS: JavaScript updated the DOM` and the document title |
+| HTTPS | PASS | Public https://example.com rendered; site information said `Connection is secure`; HTTPS-specific script assertion not tested |
+| Multiple tabs | PASS | Version, fixture/PDF, HTTPS and internal pages opened in tabs |
+| Back and forward | PASS | Second local page, back to fixture, forward to second page |
+| Reload | PASS | Reload action on local second page retained rendered content; no network/cache semantics tested |
+| Second window | NOT TESTED | Stopped additional runtime work after shutdown failure |
+| Incognito | NOT TESTED | No private window opened |
+| Bookmarks | PASS | Toolbar changed to `Edit bookmark for this tab`; history identified the fixture as bookmarked |
+| History | PASS | chrome://history rendered the dedicated profile's test visits |
+| Test downloads | PASS | `trinol-r3-smoke.txt`, 28 B, Done; chrome://downloads showed its entry and management controls |
+| Settings | PASS | chrome://settings rendered sections; no settings changed |
+| Extensions management | NOT TESTED | chrome://extensions not visited |
+| PDF viewing | PASS | Local one-page PDF rendered its test text and finished loading |
+| Print preview | PASS | One-page preview finished rendering; Cancel used, no print submitted |
+| Site permission prompts | NOT TESTED | Fixture's permission control was not exercised |
+| Session restoration | NOT TESTED | No relaunch after uninterruptible-state observation |
+| Security indicators | PASS | HTTPS connection-security popup available; no security-bypass flags; sandbox enforcement/invalid-certificate tests not run |
+
+The download used the browser's default destination, not an explicitly external
+download directory. Its completion is UI evidence; no personal Downloads listing
+or downloaded-file content inspection was performed. Test fixtures/profile/dump
+are external. Local JavaScript execution was explicitly verified; separate
+HTTPS JavaScript execution was not. Typed internal-page URLs initially lost their
+prefix and became search queries; selecting the address field and pasting the
+complete URL corrected input and made history/downloads render. This was an
+interaction-timing correction, not a source or URL-handler fix.
+
+### Shutdown failure and final host state
+
+Cmd+Q did not promptly remove the window. The native Chromium application menu
+was then opened and **Quit Chromium** selected. The subsequent UI call timed out.
+At 06:02:46.816 UTC, browser 61136 was `Us` and renderer 96349 was `U`; isolated
+Crashpad and other helpers were still present. The profile had already written
+`exit_type: Normal`, which alone did not prove completion.
+
+The next log evidence was:
+
+```text
+Teardown watchdog expired; recording dump and terminating.
+```
+
+Crashpad read warnings are timestamped 06:02:47 UTC; a renderer then reported
+that its parent rendezvous server was gone. Pinned
+`chrome/browser/shutdown_watchdog_mac.cc:64-80` waits for the shutdown-complete
+event, writes exactly that diagnostic, calls DumpWithoutCrashing, then
+`_exit(content::RESULT_CODE_HUNG)`. This **confirms watchdog termination**,
+not the underlying cause of the stalled shutdown. The process exit code was not
+captured and must not be reported as an observed 0 or inferred numeric status.
+
+At **06:05:43 UTC**, a full process-command scan found no compiled-app or test-
+profile processes, including the separately grouped Crashpad handlers. Pressure
+was 1 and swap 0 MiB. The isolated pending dump
+`e3d061ab-c5f7-487d-9abf-7e84bd01be89.dmp` exists and is preserved. No existing
+minidump stackwalk utility was found in this output directory; the dump was not
+symbolicated and no speculative repair or tool build was attempted. Its stack
+analysis is the next useful investigation for architect review. No additional
+restart, launch, signal, GN generation or compilation is needed merely to
+preserve or review this evidence.
+
+### Evidence, delivery scope and remaining gate
+
+Raw local evidence remains outside Git at
+`/Volumes/ssd(mac)2/TrinolBuild/logs/phase1cr3-runtime-kvtjt2bm`:
+artifact/host and dependency checks, duplicate-link inputs, launch command,
+browser log, process samples, observation outcome, intermediate shutdown checks
+and `shutdown-completed-check.json`. The latter filename means processes are
+absent, **not** that shutdown passed. GUI evidence is in this task's native
+accessibility/screenshot transcript; screenshots were not exported into Git.
+The isolated profile and crash dump remain preserved outside the repository.
+Earlier R/R2 evidence has not been replaced or deleted.
+
+Repository changes are limited to this report, README.md, docs/roadmap.md and
+upstream/manifest.json. The manifest now records responsive launch, failed clean
+shutdown and incomplete smoke baseline while retaining `chromium_compiled=true`
+and all historical attempts. No runtime source, library, harness, test, fixture,
+build argument or distribution configuration was added to the repository.
+
+The original startup-hang cause, old Crashpad CPU spin and new teardown stall
+remain unresolved. The R3 GUI success does not establish production readiness
+or a safe repeat-launch workflow. Secondary untested cases are listed above.
+**Phase 2 is not authorized; await architect review of the shutdown evidence.**
+
+### R3 repository validation and Git delivery
+
+All local checks passed after the documentation/manifest changes:
+
+```text
+python3 -m unittest discover -s tests -q     # 113 tests, OK
+python3 scripts/validate_foundation.py      # Phase 1b completion gate retained
+python3 -m compileall -q scripts tests      # exit 0
+bash -n scripts/audit_macos.sh               # exit 0
+git diff --check                           # exit 0
+```
+
+These offline checks validate repository tooling and documentation, not native
+shutdown or production readiness. No new test logic was needed for this evidence-
+only update. Chromium unit/browser suites were not built or run in R3.
+
+Delivery is on `main`, authenticated as `A-K-M-Asifuzzaman`, retaining author
+`Asif Zman <138548302+asif4762@users.noreply.github.com>`. `git fetch origin main`
+confirmed no divergence from base `9dfd18ee41bfc048a0b99918a7cc628dab7487fa`.
+Working and staged diffs are reviewed before the focused Conventional Commit;
+only the four listed text files are staged. The delivered commit SHA, verified
+remote HEAD and exact-commit GitHub Actions outcome accompany the final report.

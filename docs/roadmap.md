@@ -5,7 +5,7 @@
 | 0 — approved | Environment audit, architecture, small product repository, GitHub workflow | Foundation validation, owner verification and confirmed push; explicit review before proceeding |
 | 1A — approved | Read-only storage inventory, preflight utility/tests, build preparation documentation | Verified candidate filesystem/backing capacity, tests and GitHub delivery; no downloads or storage changes |
 | 1B — approved | Approved storage path, exact verified source/tool pins, Chromium checkout and toolchain | Successful dependency sync, matching SHAs, SDK compatibility and checkout evidence |
-| 1C — partial, compiled; runtime blocked | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
+| 1C — partial; responsive browsing verified, shutdown failed | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
 | 2 — proposed | Trinol branding and packaging identity | Reproducible patches, resource/build tests and launch checks |
 | 3 — proposed | Native UI redesign and trusted internal surfaces | Browser/WebUI, accessibility, keyboard and functional regression checks |
 | Later — proposed | Workspaces, split view, command palette, optional AI/sync | Separate designs, privacy/security tests and measured performance |
@@ -15,11 +15,13 @@ The overall Phase 1 exit criterion remains a verified native Chromium build and
 launch. Phase 1B has verified source/tool pins, dependency sync and hooks; see the
 [checkout report](phase-1b-checkout-report.md). It does not satisfy the build/launch
 criterion. Phase 1C-R completed the full native target at one job with exit 0;
-the arm64 executable and version metadata are verified. Dedicated-profile
-processes started, but GUI inspection and a headless version check timed out.
-Some test processes remain in an uninterruptible exit state after SIGTERM.
-See the [build report](phase-1c-build-report.md) for preserved evidence and the
-user-controlled host recovery requirement. Responsive native launch and browser
-functionality remain unverified; no rebuild or source change is justified yet.
+the arm64 executable and version metadata are verified. Following a confirmed
+host restart, R3 verified responsive native GUI, local HTML/CSS/JavaScript,
+navigation, HTTPS and core internal pages with a new isolated test profile.
+Native Quit triggered the teardown watchdog and a diagnostic dump, so clean
+shutdown failed. All test processes subsequently exited; no further launch was
+attempted. See the [build report](phase-1c-build-report.md) for the feature matrix,
+observation limits and preserved shutdown evidence. No rebuild or source change
+is justified without diagnosing that failure.
 Phase 2 still requires new explicit instruction after architect review.
 No product UI, AI integration, signing setup or distribution is implemented.
