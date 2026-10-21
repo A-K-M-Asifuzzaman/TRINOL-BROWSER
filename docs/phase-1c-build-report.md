@@ -1,14 +1,14 @@
 # Phase 1C — native build and runtime evidence
 
-Current Phase 1C-R3 verdict: **PARTIAL — responsive GUI and core browsing
-verified; clean shutdown failed**, observed 2026-10-21 Asia/Dhaka. The preserved
-native build ran successfully after a confirmed host restart. Native Quit later
-triggered Chromium's teardown watchdog and an isolated crash dump. All test
-processes were gone by 06:05:43 UTC, but that is not a clean-shutdown pass.
-See the appended R3 findings and 21-feature matrix. Phase 2 remains gated.
-
-The preceding R2 checkpoint was blocked because host recovery had not occurred;
-its original process evidence is preserved below.
+Current Phase 1C-R4 verdict: **PARTIAL — R3 dump symbolicated; native bounded
+clean shutdown remains unverified**, observed 2026-10-21 Asia/Dhaka. The R3 main
+thread was waiting for GPU command-buffer destruction during compositor cleanup;
+the underlying cause is unresolved, including a competing aggregate-timeout
+explanation. R4's initial lifecycle harness failed on early native Quit refusal.
+Later menu cleanup removed all processes without a watchdog/dump, but no browser
+exit status was captured. The harness was corrected and tested offline; further
+launches remain blocked. See the [R4 investigation](phase-1c-r4-shutdown-investigation.md).
+Phase 2 remains gated. Earlier phase checkpoints are preserved below.
 
 The following earlier history is preserved: Phase 1C was **PARTIAL — memory-blocked**
 on 2026-10-19. GN generation passed, and the missing Metal compiler was installed
@@ -1005,3 +1005,33 @@ confirmed no divergence from base `9dfd18ee41bfc048a0b99918a7cc628dab7487fa`.
 Working and staged diffs are reviewed before the focused Conventional Commit;
 only the four listed text files are staged. The delivered commit SHA, verified
 remote HEAD and exact-commit GitHub Actions outcome accompany the final report.
+
+## Phase 1C-R4 — shutdown investigation and lifecycle tooling
+
+The [complete R4 report](phase-1c-r4-shutdown-investigation.md) records dump
+validation, module UUID matches, symbolicated stacks, shutdown ordering and
+ranked hypotheses. Local LLDB recovered the actual R3 browser main-thread wait:
+ImageTransportFactory/Viz context destruction -> synchronous GPU
+DestroyCommandBuffer -> Mojo response event. This locates the wait at capture;
+it does not prove its duration or a deadlock cycle. The whole teardown watchdog
+and an earlier network-process wait each allow ten seconds, so aggregate deadline
+exhaustion is also plausible. No source patch or rebuild was justified.
+
+R4 launched one fresh-profile blank session. The first harness recorded transient
+U states, advanced Quit during startup and returned on native Quit refusal at
+39.17 seconds (supervisor exit 1; browser exit unknown). The access interruption
+and continuation gap left that instance open about 4h34m. Native-menu cleanup
+later removed all test processes by 12:07:11 UTC, without another watchdog/dump,
+but did not recover the missing process exit status. This is not a passing
+bounded lifecycle. No additional instance was launched after failure.
+
+The delivered harness preserves the startup deadline, continues bounded
+supervision after refusal, limits native requests, retains real exit status
+when available and blocks subsequent trials after failure. **143 offline tests
+pass**, including 30 lifecycle tests; its corrected native path was not rerun.
+The existing failure marker and all raw evidence remain external. No Chromium
+source, GN, pin, security setting or compiled output was changed.
+Compilation remains complete and R3 responsive-browsing passes stand; clean
+shutdown and the remaining secondary checks are still gated on architect review.
+
+PHASE 1C-R4 PARTIAL — AWAITING ARCHITECT REVIEW

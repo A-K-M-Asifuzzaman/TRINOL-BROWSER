@@ -101,7 +101,7 @@
       "strict_signature_valid": false
     },
     "final_available_external_bytes": 256197001216,
-    "resume_requirement": "Do not rebuild or relaunch as part of R3. Review the isolated teardown-watchdog dump and observation limits with the architect; clean shutdown remains unverified and Phase 2 is gated.",
+    "resume_requirement": "R4 remains partial. Review the preserved dump analysis, aggregate shutdown budget and corrected supervisor before approving another fresh-profile run. Keep the lifecycle failure marker; do not rebuild or begin Phase 2.",
     "recovery": {
       "phase": "1c-r",
       "status": "runtime_blocked",
@@ -243,6 +243,65 @@
         "session_restoration": "NOT TESTED",
         "security_indicators": "PASS"
       }
+    },
+    "runtime_recovery_r4": {
+      "phase": "1c-r4",
+      "status": "partial_lifecycle_unverified",
+      "date": "2026-10-21",
+      "report": "docs/phase-1c-r4-shutdown-investigation.md",
+      "diagnostic_evidence_directory": "logs/phase1cr4-5_frxwpb",
+      "dump": {
+        "relative_path": "test-profile-r3-15a6r33u/Crashpad-isolated/pending/e3d061ab-c5f7-487d-9abf-7e84bd01be89.dmp",
+        "sha256": "b2e86db29709a380cd63c52760e01159785916b18b2376631b51e18f33d5ff46",
+        "size_bytes": 1679200,
+        "timestamp_utc": "2026-10-21T06:02:46Z",
+        "process_id": 61136,
+        "threads": 47,
+        "modules": 1583,
+        "exception": "Crashpad simulated exception CPsx (0x43507378)",
+        "symbolicated_with": "Local Xcode LLDB; selected complete main-thread and relevant worker stacks",
+        "important_module_uuid_matches": 7
+      },
+      "observed_wait": "Browser main: compositor context destruction -> synchronous GPU DestroyCommandBuffer -> Mojo response event",
+      "underlying_root_cause_confirmed": false,
+      "competing_explanation": "10-second total teardown watchdog versus up to 10 seconds of earlier network-process waiting; stage durations unavailable",
+      "chromium_source_changed": false,
+      "gn_regenerated": false,
+      "compilation_run": false,
+      "runtime": {
+        "evidence_directory": "logs/phase1cr4-lifecycle-gwmalazh",
+        "new_browser_launches": 1,
+        "profile_directory": "test-profile-r4-qi_hrzex",
+        "pid": 55645,
+        "requested_runtime_seconds": 45,
+        "requested_grace_seconds": 30,
+        "initial_supervisor_elapsed_seconds": 39.168248417,
+        "supervisor_exit_code": 1,
+        "browser_exit_code": null,
+        "native_quit_accepted_in_supervised_run": false,
+        "uninterruptible_observed": true,
+        "clean_shutdown_verified": false,
+        "watchdog_observed": false,
+        "new_dump_observed": false,
+        "cleanup": "Later native-menu Quit; all test processes absent by 2026-10-21T12:07:11Z; no captured exit status",
+        "cleanup_exit_code": null,
+        "remaining_processes": 0,
+        "signals_sent": 0,
+        "continuous_supervision": false,
+        "observation_limit": "Initial supervisor aborted on Quit refusal; browser stayed open across access/continuation gap about 4h34m",
+        "further_launches_blocked": true
+      },
+      "harness": {
+        "script": "scripts/test_chromium_lifecycle_macos.py",
+        "offline_tests": "tests/test_runtime_lifecycle.py",
+        "new_test_count": 30,
+        "corrected_native_path_verified": false,
+        "failure_marker": "logs/TrinolLifecycle.blocked.json"
+      },
+      "final_pressure_level": 1,
+      "final_swap_used_mib": 3802.75,
+      "final_physical_available_bytes": 270755524608,
+      "phase_2_authorized": false
     }
   }
 }

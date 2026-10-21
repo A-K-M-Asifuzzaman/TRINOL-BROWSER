@@ -7,9 +7,11 @@ TrinolIT branding and a distinct native interface. No Trinol customization is im
 **Phase 1C is partial; compilation and responsive browsing succeeded:** the
 preserved one-job build completed with exit 0. After a host restart, native
 Chromium 155.0.8059.85 rendered HTML/CSS/JavaScript, HTTPS and internal pages.
-Clean shutdown failed: the teardown watchdog terminated the browser and saved
-an isolated dump. All test processes subsequently exited. Source/tool pins and
-outputs remain preserved. Phase 2 awaits architect review; see the build report.
+Clean shutdown remains unverified. R4 symbolicated the earlier GPU teardown wait
+and added lifecycle tooling, but its first trial failed and the corrected native
+path still needs validation. All test processes were subsequently cleaned up.
+Source/tool pins and outputs remain preserved. Phase 2 awaits architect review;
+see the [R4 investigation](docs/phase-1c-r4-shutdown-investigation.md).
 
 This repository contains Trinol-owned changes, documentation, configuration
 examples and validation. The Chromium checkout, depot_tools and build outputs

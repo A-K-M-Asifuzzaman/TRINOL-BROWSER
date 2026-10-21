@@ -18,10 +18,14 @@ criterion. Phase 1C-R completed the full native target at one job with exit 0;
 the arm64 executable and version metadata are verified. Following a confirmed
 host restart, R3 verified responsive native GUI, local HTML/CSS/JavaScript,
 navigation, HTTPS and core internal pages with a new isolated test profile.
-Native Quit triggered the teardown watchdog and a diagnostic dump, so clean
-shutdown failed. All test processes subsequently exited; no further launch was
-attempted. See the [build report](phase-1c-build-report.md) for the feature matrix,
-observation limits and preserved shutdown evidence. No rebuild or source change
-is justified without diagnosing that failure.
+R3 native Quit triggered a teardown watchdog and dump. R4 symbolicated the
+browser-main GPU destruction wait, but did not establish its underlying cause.
+R4's initial blank-session supervisor failed on early native Quit refusal;
+later menu cleanup left no processes or dump, but no browser exit status was
+captured. The corrected lifecycle harness passes offline tests and remains
+blocked from further native trials pending review. See the
+[R4 investigation](phase-1c-r4-shutdown-investigation.md) for stacks, competing
+shutdown-budget hypotheses, limitations and the next discriminating test.
+No Chromium rebuild or source patch was performed.
 Phase 2 still requires new explicit instruction after architect review.
 No product UI, AI integration, signing setup or distribution is implemented.
