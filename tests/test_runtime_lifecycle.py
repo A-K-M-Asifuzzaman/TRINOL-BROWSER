@@ -96,8 +96,10 @@ class LifecycleTests(unittest.TestCase):
 
     def test_native_quit_refuses_reused_pid_or_uninterruptible(self):
         with patch.object(life, 'command') as cmd:
-            for rows in [[], [self.row(start='changed')], [self.row(state='U')]]:
-                with self.assertRaises(ValueError): life.native_quit(self.row(), rows)
+            with self.assertRaises(ValueError):
+                life.native_quit(self.row(), [self.row(start='changed')])
+            self.assertEqual(life.native_quit(self.row(), []), 'exiting')
+            self.assertEqual(life.native_quit(self.row(), [self.row(state='U')]), 'uninterruptible')
             cmd.assert_not_called()
 
     def test_native_quit_targets_existing_pid_and_exact_executable(self):
@@ -278,6 +280,13 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(result['elapsed_seconds'], 20)
         self.assertIsNone(result['exit_code'])
         quit_app.assert_not_called()
+
+    def test_transient_u_during_native_recheck_is_deferred(self):
+        result, quit_app = self.simulate(exit_at=12,
+            inspect_app=Mock(side_effect=['uninterruptible', 'ready']))
+        self.assertIsNone(result['failure'])
+        self.assertEqual(result['quit_elapsed'], 10)
+        quit_app.assert_called_once()
 
     def test_transient_u_recovers_without_poisoning_pass(self):
         result, quit_app = self.simulate(exit_at=12, state=lambda t: 'U' if t < 6 else 'S')

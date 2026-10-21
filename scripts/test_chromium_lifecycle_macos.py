@@ -141,8 +141,12 @@ def owned_processes(rows, profile, known):
 
 def native_application(original, rows, request=False):
     current = next((r for r in rows if identity(r) == identity(original)), None)
-    if not current or 'U' in current['state']:
-        raise ValueError('Quit refused: process identity absent/changed or uninterruptible')
+    if not current:
+        if any(r['pid'] == original['pid'] for r in rows):
+            raise ValueError('Native application process identity changed')
+        return 'exiting'
+    if 'U' in current['state']:
+        return 'uninterruptible'
     # NSRunningApplication targets the existing PID and executable, never launches
     # an installed bundle. terminate is a normal application Quit request.
     script = '''ObjC.import('AppKit');
@@ -289,7 +293,8 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
                         event('quit_requested', attempt=result['quit_attempts'])
                         try:
                             response = quit_app(original, fresh)
-                            if response not in ('accepted', 'refused', 'registered', 'unregistered', 'exiting'):
+                            if response not in ('accepted', 'refused', 'registered', 'unregistered',
+                                                'exiting', 'uninterruptible'):
                                 raise ValueError('Unexpected native Quit result')
                             event('quit_' + response)
                             if response == 'accepted':
