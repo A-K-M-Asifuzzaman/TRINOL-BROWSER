@@ -6,6 +6,7 @@ means failure; exit 2 means preflight blocked. Never sends termination signals.
 """
 import argparse
 import ctypes
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -24,11 +25,15 @@ from verify_upstream_checkout import ROOT, verify
 APP = 'chromium/src/out/TrinolDev/Chromium.app'
 EXE = APP + '/Contents/MacOS/Chromium'
 WATCHDOG = 'watchdog expired;'
+COMMAND_DEADLINE = None
 
 
 def command(*args):
+    timeout = 5 if COMMAND_DEADLINE is None else min(5, COMMAND_DEADLINE - time.monotonic())
+    if timeout <= 0:
+        raise TimeoutError('Lifecycle hard deadline reached')
     return subprocess.run(args, check=True, capture_output=True, text=True,
-                          timeout=5, env={**os.environ, 'LC_ALL': 'C'}).stdout
+                          timeout=timeout, env={**os.environ, 'LC_ALL': 'C'}).stdout
 
 
 def verify_executable(root, version):
@@ -64,7 +69,7 @@ def inspect_storage(root, expected_uuid, probe):
 
 
 def isolated_profile(root):
-    profile = Path(tempfile.mkdtemp(prefix='test-profile-r4-', dir=root))
+    profile = Path(tempfile.mkdtemp(prefix='test-profile-r5-', dir=root))
     contained(root, profile.relative_to(root))
     crash = profile / 'Crashpad-isolated'
     crash.mkdir(mode=0o700)
@@ -134,7 +139,7 @@ def owned_processes(rows, profile, known):
     return owned
 
 
-def native_quit(original, rows):
+def native_application(original, rows, request=False):
     current = next((r for r in rows if identity(r) == identity(original)), None)
     if not current or 'U' in current['state']:
         raise ValueError('Quit refused: process identity absent/changed or uninterruptible')
@@ -143,14 +148,27 @@ def native_quit(original, rows):
     script = '''ObjC.import('AppKit');
 function run(args) {
   const app = $.NSRunningApplication.runningApplicationWithProcessIdentifier(Number(args[0]));
-  if (!app || !app.executableURL || ObjC.unwrap(app.executableURL.path) !== args[1])
-    throw Error('Application identity changed');
-  return app.terminate ? 'requested' : 'refused';
+  if (app.isNil()) return 'unregistered';
+  if (app.terminated) return 'exiting';
+  if (app.executableURL.isNil() || ObjC.unwrap(app.executableURL.path) !== args[1])
+    return 'identity_mismatch';
+  if (!app.finishedLaunching) return 'registered';
+  if (args[2] !== 'quit') return 'ready';
+  // JXA invokes zero-argument Objective-C selectors on property access.
+  const accepted = app.terminate;
+  if (typeof accepted !== 'boolean') throw Error('Non-Boolean Quit response');
+  return accepted === true ? 'accepted' : 'refused';
 }'''
     output = command('/usr/bin/osascript', '-l', 'JavaScript', '-e', script,
-                     str(original['pid']), original['executable']).strip()
-    if output != 'requested':
-        raise ValueError('Native Quit was refused: ' + repr(output))
+                     str(original['pid']), original['executable'],
+                     'quit' if request else 'inspect').strip()
+    if output not in ('unregistered', 'registered', 'ready', 'exiting', 'accepted', 'refused'):
+        raise ValueError('Invalid native application identity/response: ' + repr(output))
+    return output
+
+
+def native_quit(original, rows):
+    return native_application(original, rows, request=True)
 
 
 def classify(exit_code, quit_requested, failure, watchdog, remaining):
@@ -161,92 +179,196 @@ def classify(exit_code, quit_requested, failure, watchdog, remaining):
 
 
 def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
-              clock=time.monotonic, sleep=time.sleep, interrupted=lambda: False):
-    start = clock()
+              clock=time.monotonic, sleep=time.sleep, interrupted=lambda: False,
+              inspect_app=None, started=None, initial_failure=None, evidence_guard=None):
+    start = clock() if started is None else started
     deadline = start + seconds
     finish = deadline + grace
-    known = set()
+    known, u_since = set(), {}
     original = None
     result = dict(pid=process.pid, exit_code=None, quit_requested=False,
-                  quit_attempts=0, quit_errors=[], failure=None,
-                  uninterruptible_observed=False, remaining=[])
-    next_quit = deadline
-    last = start
-    with (run / 'samples.jsonl').open('x') as output:
-        while True:
+                  quit_attempts=0, quit_errors=[], failure=initial_failure,
+                  uninterruptible_observed=False, persistent_uninterruptible=False,
+                  remaining=[], events=[])
+    next_quit, last = deadline, start
+    native_state = None
+    exit_recorded = False
+    helpers_verified = False
+
+    def save(name, value):
+        try:
+            if evidence_guard:
+                evidence_guard()
+            with (run / name).open('a') as out:
+                out.write(json.dumps(value) + '\n')
+        except Exception as exc:
+            result['failure'] = result['failure'] or 'evidence_write_failed: ' + str(exc)
+
+    def event(name, **details):
+        value = dict(event=name, elapsed=clock()-start, time_unix=time.time(),
+                     pid=process.pid, browser_identity=original, **details)
+        result['events'].append(value)
+        save('events.jsonl', value)
+
+    event('process_spawned')
+    while True:
+        # Poll before potentially failing inspection, retaining direct-child ownership.
+        result['exit_code'] = process.poll()
+        if result['exit_code'] is not None and not exit_recorded:
+            event('browser_exited', exit_code=result['exit_code'])
+            exit_recorded = True
+        now = clock()
+        if now >= finish:
+            if now - last > 15:
+                result['failure'] = result['failure'] or 'observation_delayed'
+                event('observation_delayed', interval=now-last)
+            result['failure'] = result['failure'] or 'lifecycle_timeout'
+            event('timeout_reached', cleanup_required=result['exit_code'] is None or bool(result['remaining']))
+            break
+        try:
+            resources = guard()
+            rows = sample()
             now = clock()
-            try:
-                resources = guard()
-                rows = sample()
-                now = clock()
-                owned = owned_processes(rows, profile, known)
-                result['remaining'] = owned
-                result['exit_code'] = process.poll()
-                if original is None:
-                    original = next((r for r in owned if r['pid'] == process.pid), None)
-                    if original:
-                        result['browser_identity'] = original
-                if any('U' in r['state'] for r in owned):
-                    result.update(uninterruptible_observed=True,
-                                  failure='uninterruptible_process_observed')
-                if len(owned) != len(rows):
-                    result['failure'] = 'unexpected_compiled_app_process'
-                if now - last > 15:
-                    result['failure'] = 'observation_delayed'
-                if interrupted():
-                    result['failure'] = 'supervisor_interrupted'
-                output.write(json.dumps(dict(elapsed=now-start, processes=owned,
-                    resources=resources if isinstance(resources, dict) else None,
-                    exit_code=result['exit_code'])) + '\n')
-                output.flush()
-                if result['failure']:
-                    # A transient U state blocks future trials, but must not
-                    # trigger Quit before this instance finishes starting.
-                    if result['failure'] in ('supervisor_interrupted',
-                                             'unexpected_compiled_app_process'):
-                        deadline = min(deadline, now)
-                        next_quit = min(next_quit, now)
-                        finish = min(finish, now + grace)
-                if result['exit_code'] is not None:
-                    if not owned:
-                        break
-                    finish = min(finish, now + grace)
-                elif (next_quit <= now < finish and not result['quit_requested'] and
-                      result['quit_attempts'] < 2):
-                    if original and not any('U' in r['state'] for r in owned):
-                        # Re-read immediately before the identity-checked native call.
+            owned = owned_processes(rows, profile, known)
+            result['remaining'] = owned
+            if original is None:
+                original = next((r for r in owned if r['pid'] == process.pid), None)
+                if original:
+                    result['browser_identity'] = original
+                    event('process_identity_verified')
+            active_u = {identity(r) for r in owned if 'U' in r['state']}
+            for key in active_u:
+                result['uninterruptible_observed'] = True
+                if key not in u_since:
+                    u_since[key] = now
+                    event('uninterruptible_started', process_identity=key)
+                elif now - u_since[key] >= 15 and not result['persistent_uninterruptible']:
+                    result['persistent_uninterruptible'] = True
+                    result['failure'] = result['failure'] or 'persistent_uninterruptible_process'
+                    event('persistent_uninterruptible', process_identity=key, observed_span=now-u_since[key])
+            for key in list(u_since):
+                if key not in active_u:
+                    event('uninterruptible_ended', process_identity=key, observed_span=now-u_since.pop(key))
+            if len(owned) != len(rows):
+                result['failure'] = result['failure'] or 'unexpected_compiled_app_process'
+            if now - last > 15:
+                result['failure'] = result['failure'] or 'observation_delayed'
+                event('observation_delayed', interval=now-last)
+            if interrupted():
+                result['failure'] = result['failure'] or 'supervisor_interrupted'
+                next_quit = min(next_quit, now)
+            save('samples.jsonl', dict(elapsed=now-start, processes=owned,
+                 resources=resources if isinstance(resources, dict) else None,
+                 exit_code=process.poll()))
+            # A command that consumed the budget cannot authorize a late Quit.
+            if clock() >= finish:
+                continue
+            if process.poll() is not None:
+                if not owned:
+                    if not exit_recorded:
+                        event('browser_exited', exit_code=process.poll())
+                        exit_recorded = True
+                    event('helpers_exited')
+                    helpers_verified = True
+                    break
+            elif original and not active_u:
+                if inspect_app and native_state != 'ready':
+                    state = inspect_app(original, sample())
+                    if state != native_state:
+                        if state == 'ready' and native_state != 'registered':
+                            event('browser_registered')
+                        event({'registered': 'browser_registered', 'ready': 'browser_ready_for_native_quit'}.get(
+                            state, 'application_' + state))
+                    native_state = state
+                if (next_quit <= clock() < finish and not result['quit_requested'] and
+                        result['quit_attempts'] < 2 and
+                        (inspect_app is None or native_state == 'ready')):
+                    fresh = sample()
+                    if clock() < finish and not any('U' in r['state'] for r in fresh):
                         result['quit_attempts'] += 1
+                        event('quit_requested', attempt=result['quit_attempts'])
                         try:
-                            quit_app(original, sample())
-                            result['quit_requested'] = True
-                            result['quit_elapsed'] = clock() - start
-                        except (ValueError, subprocess.SubprocessError) as exc:
+                            response = quit_app(original, fresh)
+                            if response not in ('accepted', 'refused', 'registered', 'unregistered', 'exiting'):
+                                raise ValueError('Unexpected native Quit result')
+                            event('quit_' + response)
+                            if response == 'accepted':
+                                result['quit_requested'] = True
+                                result['quit_elapsed'] = clock() - start
+                            else:
+                                result['quit_errors'].append(response)
+                                native_state = None
+                        except Exception as exc:
                             result['quit_errors'].append(str(exc))
                             result['failure'] = result['failure'] or 'native_quit_failed'
-                            next_quit = clock() + 5
-                        # Refusal is not an exit event. Keep supervising/reaping
-                        # through the bounded grace period, even after both tries.
-                last = now
-            except (OSError, ValueError, InspectionError, subprocess.SubprocessError) as exc:
-                result['failure'] = str(exc)
-                # On inspection/mount failure, preserve the child identity and
-                # stop safely: no guessed Quit target, signal or retry loop.
-                break
-            if now >= finish:
-                result['failure'] = result['failure'] or 'lifecycle_timeout'
-                break
-            sleep(min(2, max(0, finish - clock())))
+                            event('quit_error', reason=str(exc))
+                        next_quit = clock() + 5
+            last = now
+        except Exception as exc:
+            # Inspection failures invalidate PASS but do not abandon a live child.
+            result['failure'] = result['failure'] or str(exc)
+            event('monitor_error', reason=str(exc))
+        sleep(min(2, max(0, finish - clock())))
     result['exit_code'] = process.poll()
+    if result['exit_code'] is not None and not exit_recorded:
+        event('browser_exited', exit_code=result['exit_code'])
     result['elapsed_seconds'] = clock() - start
+    result['cleanup_required'] = result['exit_code'] is None or not helpers_verified
     return result
 
 
+R4_MARKER_SHA256 = 'c2c2c21b47a933abcf91fc90aaa3573f3863fa6bc642ed7302deea5f2807ad5c'
+
+
+def review_r4_marker(root, latch, rows):
+    """Only the exact R4 failure reviewed by R5 is eligible, never future failures."""
+    if rows:
+        raise ValueError('Previous compiled browser/helpers remain')
+    raw = latch.read_bytes()
+    if hashlib.sha256(raw).hexdigest() != R4_MARKER_SHA256:
+        raise ValueError('Marker differs from the reviewed R4 failure')
+    marker = json.loads(raw)
+    evidence = contained(root, Path(marker['evidence']).relative_to(root))
+    result = json.loads((evidence / 'result.json').read_text())
+    launch = json.loads((evidence / 'launch.json').read_text())
+    cleanup = json.loads((evidence / 'cleanup-result.json').read_text())
+    if (result != marker['result'] or result['clean_shutdown'] != 'FAIL' or
+            result['pid'] != launch['pid'] or result['profile'] != launch['profile'] or
+            cleanup['remaining_processes'] != [] or not (evidence / 'samples.jsonl').is_file() or
+            not (evidence / 'browser.log').is_file()):
+        raise ValueError('R4 evidence does not validate the reviewed marker')
+    archive = contained(root, 'logs/TrinolLifecycle.r4-reviewed.json')
+    if archive.exists():
+        raise ValueError('R5 reviewed retry already consumed')
+    return dict(archive=str(archive), marker_sha256=R4_MARKER_SHA256,
+                previous_evidence=str(evidence), authorization='Phase 1C-R5 section 8, one reviewed retry')
+
+
+def arm_latch(latch, run, retry):
+    record = dict(evidence=str(run), state='in_progress', reviewed_retry=retry)
+    if retry:
+        if hashlib.sha256(latch.read_bytes()).hexdigest() != retry['marker_sha256']:
+            raise ValueError('Reviewed marker changed before archival')
+        # Preserve original bytes and atomically replace the guard: never a clear gap.
+        os.link(latch, retry['archive'])
+        temporary = run / 'new-marker.json'
+        temporary.write_text(json.dumps(record) + '\n')
+        os.replace(temporary, latch)
+    else:
+        with latch.open('x') as out:
+            out.write(json.dumps(record) + '\n')
+
+
 def main():
+    global COMMAND_DEADLINE
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-root', required=True, type=Path)
     parser.add_argument('--volume-uuid', required=True)
     parser.add_argument('--seconds', type=int, default=30)
     parser.add_argument('--grace-seconds', type=int, default=30)
+    parser.add_argument('--reviewed-r4-retry', action='store_true',
+                        help='Consume only the exact failure reviewed by Phase 1C-R5')
+    parser.add_argument('--workload', choices=('blank', 'browsing'), default='blank')
     args = parser.parse_args()
     if not 10 <= args.seconds <= 600 or not 10 <= args.grace_seconds <= 60:
         parser.error('Runtime must be 10..600 seconds; exit grace 10..60 seconds')
@@ -265,9 +387,11 @@ def main():
         latch = contained(root, 'logs/TrinolLifecycle.blocked.json')
         # Share the build runner's lock: an authorized build cannot overlap.
         with build_lock(root):
-            if latch.exists():
+            rows = snapshot(app)
+            retry = review_r4_marker(root, latch, rows) if args.reviewed_r4_retry else None
+            if latch.exists() and not retry:
                 raise ValueError('Prior lifecycle failure requires review: ' + str(latch))
-            if snapshot(app):
+            if rows:
                 raise ValueError('Existing compiled-app processes; no overlapping launch')
             processes = command('/bin/ps', '-axo', 'comm=')
             if any(Path(p.strip()).name in ('siso', 'ninja', 'autoninja', 'clang', 'clang++')
@@ -276,7 +400,7 @@ def main():
             baseline = memory(probe)
             if baseline['pressure'] != 1:
                 raise ValueError('Normal idle memory pressure required')
-            run = Path(tempfile.mkdtemp(prefix='phase1cr4-lifecycle-', dir=logs))
+            run = Path(tempfile.mkdtemp(prefix='phase1cr5-lifecycle-', dir=logs))
             profile, crash = isolated_profile(root)
             device = root.stat().st_dev
 
@@ -293,27 +417,54 @@ def main():
 
             argv = [str(exe), '--user-data-dir=' + str(profile), '--no-first-run',
                     '--no-default-browser-check', 'about:blank']
+            if args.workload == 'browsing':
+                fixture = run / 'rendering.html'
+                fixture.write_text('<!doctype html><title>R5 loading</title><h1>R5 local HTML</h1>'
+                    '<p id="result">Pending JavaScript</p><script>'
+                    'document.querySelector("#result").textContent="PASS: JavaScript DOM updated";'
+                    'document.title="R5 JavaScript PASS";</script>')
+                argv[-1:] = [fixture.as_uri(), 'https://example.com/']
             interrupted = []
             for sig in (signal.SIGINT, signal.SIGTERM):
                 signal.signal(sig, lambda *_: interrupted.append(True))
             guard()
             # A crash of this supervisor must also block the next launch.
-            latch.write_text(json.dumps(dict(evidence=str(run), state='in_progress')) + '\n')
+            arm_latch(latch, run, retry)
+            print('Evidence: ' + str(run), flush=True)
             with (run / 'browser.log').open('x') as log:
+                started = time.monotonic()
+                COMMAND_DEADLINE = started + args.seconds + args.grace_seconds
+                # Bound each runtime probe by both five seconds and the run deadline.
+                probe.command = lambda *a: command(*a).encode()
                 process = subprocess.Popen(argv, env=launch_environment(crash),
                                            stdin=subprocess.DEVNULL, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=True)
-                (run / 'launch.json').write_text(json.dumps(dict(command=argv,
-                    pid=process.pid, profile=str(profile), crash_directory=str(crash),
-                    start_time_unix=time.time(), seconds=args.seconds,
-                    grace_seconds=args.grace_seconds, baseline_memory=baseline,
-                    volume_uuid=args.volume_uuid), indent=2) + '\n')
-                print('Evidence: ' + str(run), flush=True)
+                launch_failure = None
+                try:
+                    (run / 'launch.json').write_text(json.dumps(dict(command=argv,
+                        pid=process.pid, profile=str(profile), crash_directory=str(crash),
+                        start_time_unix=time.time(), seconds=args.seconds,
+                        grace_seconds=args.grace_seconds, baseline_memory=baseline,
+                        volume_uuid=args.volume_uuid, reviewed_retry=retry,
+                        workload=args.workload), indent=2) + '\n')
+                except Exception as exc:
+                    launch_failure = 'launch_evidence_failed: ' + str(exc)
                 result = supervise(process, profile, run, args.seconds, args.grace_seconds,
                                    lambda: snapshot(app), guard, native_quit,
-                                   interrupted=lambda: bool(interrupted))
+                                   interrupted=lambda: bool(interrupted),
+                                   inspect_app=native_application, started=started,
+                                   initial_failure=launch_failure,
+                                   evidence_guard=lambda: assert_mount(root, Path(volume.mount), device))
+            COMMAND_DEADLINE = None
             assert_mount(root, Path(volume.mount), device)
             result['watchdog'] = WATCHDOG in (run / 'browser.log').read_text(errors='replace').lower()
+            if result['watchdog']:
+                event = dict(event='watchdog_detected_in_log', time_unix=time.time(),
+                             elapsed=time.monotonic()-started, pid=process.pid,
+                             browser_identity=result.get('browser_identity'))
+                result.setdefault('events', []).append(event)
+                with (run / 'events.jsonl').open('a') as events:
+                    events.write(json.dumps(event) + '\n')
             result['dumps'] = [str(p.relative_to(profile)) for p in crash.rglob('*.dmp')]
             if result['dumps']:
                 result['failure'] = result['failure'] or 'crash_dump_created'
@@ -321,6 +472,8 @@ def main():
                 result['failure'], result['watchdog'], result['remaining'])
             result['gui_and_functional_tests'] = 'NOT TESTED'
             result['profile'] = str(profile)
+            if result.get('cleanup_required'):
+                result['operator_action'] = 'Immediate supervised native GUI cleanup required; no new launch'
             (run / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
             if result['clean_shutdown'] != 'PASS':
                 latch.write_text(json.dumps(dict(evidence=str(run), result=result), indent=2) + '\n')
@@ -328,10 +481,14 @@ def main():
                 latch.unlink()
             print(json.dumps(result), flush=True)
             return 0 if result['clean_shutdown'] == 'PASS' else 1
-    except (OSError, ValueError, InspectionError, subprocess.SubprocessError) as exc:
+    except Exception as exc:
         print(json.dumps(dict(outcome='blocked' if process is None else 'monitor_failure',
-                              reason=str(exc), pid=process.pid if process else None)), flush=True)
+                              reason=str(exc), pid=process.pid if process else None,
+                              exit_code=process.poll() if process else None,
+                              cleanup_required=process is not None and process.poll() is None)), flush=True)
         return 2 if process is None else 1
+    finally:
+        COMMAND_DEADLINE = None
 
 
 if __name__ == '__main__':
