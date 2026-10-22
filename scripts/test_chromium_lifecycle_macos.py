@@ -7,6 +7,7 @@ means failure; exit 2 means preflight blocked. Never sends termination signals.
 import argparse
 import ctypes
 import hashlib
+from functools import lru_cache
 import json
 import os
 from pathlib import Path
@@ -21,19 +22,23 @@ import time
 from build_chromium_macos import assert_mount, build_lock, contained, memory
 from check_chromium_build_storage import GIB, InspectionError, MacProbe, capacity
 from verify_upstream_checkout import ROOT, verify
+from runtime_evidence import EvidenceWriter, Latency
 
 APP = 'chromium/src/out/TrinolDev/Chromium.app'
 EXE = APP + '/Contents/MacOS/Chromium'
 WATCHDOG = 'watchdog expired;'
 COMMAND_DEADLINE = None
+TIMING = None
 
 
 def command(*args):
     timeout = 5 if COMMAND_DEADLINE is None else min(5, COMMAND_DEADLINE - time.monotonic())
     if timeout <= 0:
         raise TimeoutError('Lifecycle hard deadline reached')
-    return subprocess.run(args, check=True, capture_output=True, text=True,
-                          timeout=timeout, env={**os.environ, 'LC_ALL': 'C'}).stdout
+    runner = subprocess.run if TIMING is None else lambda *a, **kw: TIMING.call(
+        'subprocess_wait:' + Path(args[0]).name, subprocess.run, *a, **kw)
+    return runner(args, check=True, capture_output=True, text=True,
+                  timeout=timeout, env={**os.environ, 'LC_ALL': 'C'}).stdout
 
 
 def verify_executable(root, version):
@@ -69,7 +74,7 @@ def inspect_storage(root, expected_uuid, probe):
 
 
 def isolated_profile(root):
-    profile = Path(tempfile.mkdtemp(prefix='test-profile-r5-', dir=root))
+    profile = Path(tempfile.mkdtemp(prefix='test-profile-r6-', dir=root))
     contained(root, profile.relative_to(root))
     crash = profile / 'Crashpad-isolated'
     crash.mkdir(mode=0o700)
@@ -86,10 +91,16 @@ def launch_environment(crash):
     return env
 
 
-def executable_path(pid):
+@lru_cache(maxsize=1)
+def libproc():
     lib = ctypes.CDLL('/usr/lib/libproc.dylib')
     lib.proc_pidpath.argtypes = [ctypes.c_int, ctypes.c_void_p, ctypes.c_uint32]
     lib.proc_pidpath.restype = ctypes.c_int
+    return lib
+
+
+def executable_path(pid):
+    lib = libproc()
     buf = ctypes.create_string_buffer(4096)
     return os.fsdecode(buf.value) if lib.proc_pidpath(pid, buf, len(buf)) > 0 else ''
 
@@ -110,10 +121,19 @@ def parse_processes(text, app, path_for_pid):
     return rows
 
 
-def snapshot(app):
-    return parse_processes(command('/bin/ps', '-axo',
-                                   'pid=,ppid=,state=,lstart=,pcpu=,rss=,command='),
-                           app, executable_path)
+def snapshot(app, pid=None):
+    def collect():
+        fields = 'pid=,ppid=,state=,lstart=,pcpu=,rss=,command='
+        try:
+            return command('/bin/ps', '-p', str(pid), '-o', fields) if pid else command('/bin/ps', '-axo', fields)
+        except subprocess.CalledProcessError as exc:
+            if pid and exc.returncode == 1 and not exc.stdout.strip():
+                return ''  # The child can exit between poll and its fresh identity check.
+            raise
+    if TIMING is None:
+        return parse_processes(collect(), app, executable_path)
+    text = TIMING.call('target_process_list' if pid else 'full_process_list', collect)
+    return parse_processes(text, app, lambda p: TIMING.call('executable_path', executable_path, p))
 
 
 def identity(row):
@@ -184,7 +204,10 @@ def classify(exit_code, quit_requested, failure, watchdog, remaining):
 
 def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
               clock=time.monotonic, sleep=time.sleep, interrupted=lambda: False,
-              inspect_app=None, started=None, initial_failure=None, evidence_guard=None):
+              inspect_app=None, started=None, initial_failure=None, evidence_guard=None,
+              writer=None, timing=None,
+              fresh_sample=None):
+    timing = timing or Latency(clock)
     start = clock() if started is None else started
     deadline = start + seconds
     finish = deadline + grace
@@ -195,12 +218,19 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
                   uninterruptible_observed=False, persistent_uninterruptible=False,
                   remaining=[], events=[])
     next_quit, last = deadline, start
+    next_observation = start
+    last_poll = start
+    result.update(max_poll_gap=0, max_observation_gap=0)
     native_state = None
     exit_recorded = False
     helpers_verified = False
 
     def save(name, value):
         try:
+            if writer is not None:
+                if not writer.submit(name, value):
+                    result['failure'] = result['failure'] or writer.error
+                return
             if evidence_guard:
                 evidence_guard()
             with (run / name).open('a') as out:
@@ -209,15 +239,30 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
             result['failure'] = result['failure'] or 'evidence_write_failed: ' + str(exc)
 
     def event(name, **details):
-        value = dict(event=name, elapsed=clock()-start, time_unix=time.time(),
-                     pid=process.pid, browser_identity=original, **details)
-        result['events'].append(value)
+        value = timing.call('event_creation', dict, event=name, elapsed=clock()-start,
+                            time_unix=time.time(), pid=process.pid, browser_identity=original, **details)
+        if len(result['events']) < 512:
+            result['events'].append(value)
+        else:
+            result['failure'] = result['failure'] or 'event_memory_limit'
         save('events.jsonl', value)
+
+    def poll():
+        nonlocal last_poll
+        code = timing.call('child_poll', process.poll)
+        now = clock()
+        gap = now-last_poll
+        result['max_poll_gap'] = max(result['max_poll_gap'], gap)
+        if gap > 15:
+            result['failure'] = result['failure'] or 'observation_delayed'
+            event('child_poll_delayed', interval=gap)
+        last_poll = now
+        return code
 
     event('process_spawned')
     while True:
         # Poll before potentially failing inspection, retaining direct-child ownership.
-        result['exit_code'] = process.poll()
+        result['exit_code'] = poll()
         if result['exit_code'] is not None and not exit_recorded:
             event('browser_exited', exit_code=result['exit_code'])
             exit_recorded = True
@@ -229,11 +274,25 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
             result['failure'] = result['failure'] or 'lifecycle_timeout'
             event('timeout_reached', cleanup_required=result['exit_code'] is None or bool(result['remaining']))
             break
+        if writer is not None:
+            timing.call('evidence_transport', writer.pump)
+            result['failure'] = result['failure'] or writer.error
+        if now < next_observation and result['exit_code'] is None:
+            sleep(min(.25, next_observation-now, finish-now))
+            continue
+        cycle_start = clock()
         try:
-            resources = guard()
-            rows = sample()
+            resources = timing.call('resource_guard', guard)
+            rows = timing.call('process_snapshot', sample)
             now = clock()
-            owned = owned_processes(rows, profile, known)
+            gap = now-last
+            result['max_observation_gap'] = max(result['max_observation_gap'], gap)
+            if gap > 15:
+                result['failure'] = result['failure'] or 'observation_delayed'
+                event('observation_delayed', interval=gap)
+                u_since.clear()  # Missing observations cannot prove continuous U residence.
+            last = now
+            owned = timing.call('process_ownership', owned_processes, rows, profile, known)
             result['remaining'] = owned
             if original is None:
                 original = next((r for r in owned if r['pid'] == process.pid), None)
@@ -255,29 +314,26 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
                     event('uninterruptible_ended', process_identity=key, observed_span=now-u_since.pop(key))
             if len(owned) != len(rows):
                 result['failure'] = result['failure'] or 'unexpected_compiled_app_process'
-            if now - last > 15:
-                result['failure'] = result['failure'] or 'observation_delayed'
-                event('observation_delayed', interval=now-last)
             if interrupted():
                 result['failure'] = result['failure'] or 'supervisor_interrupted'
                 next_quit = min(next_quit, now)
             save('samples.jsonl', dict(elapsed=now-start, processes=owned,
                  resources=resources if isinstance(resources, dict) else None,
-                 exit_code=process.poll()))
+                 exit_code=poll()))
             # A command that consumed the budget cannot authorize a late Quit.
             if clock() >= finish:
                 continue
-            if process.poll() is not None:
+            if poll() is not None:
                 if not owned:
                     if not exit_recorded:
-                        event('browser_exited', exit_code=process.poll())
+                        event('browser_exited', exit_code=poll())
                         exit_recorded = True
                     event('helpers_exited')
                     helpers_verified = True
                     break
             elif original and not active_u:
                 if inspect_app and native_state != 'ready':
-                    state = inspect_app(original, sample())
+                    state = timing.call('native_readiness', inspect_app, original, rows)
                     if state != native_state:
                         if state == 'ready' and native_state != 'registered':
                             event('browser_registered')
@@ -287,12 +343,12 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
                 if (next_quit <= clock() < finish and not result['quit_requested'] and
                         result['quit_attempts'] < 2 and
                         (inspect_app is None or native_state == 'ready')):
-                    fresh = sample()
+                    fresh = timing.call('quit_identity_recheck', fresh_sample or sample)
                     if clock() < finish and not any('U' in r['state'] for r in fresh):
                         result['quit_attempts'] += 1
                         event('quit_requested', attempt=result['quit_attempts'])
                         try:
-                            response = quit_app(original, fresh)
+                            response = timing.call('native_quit', quit_app, original, fresh)
                             if response not in ('accepted', 'refused', 'registered', 'unregistered',
                                                 'exiting', 'uninterruptible'):
                                 raise ValueError('Unexpected native Quit result')
@@ -313,10 +369,18 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
             # Inspection failures invalidate PASS but do not abandon a live child.
             result['failure'] = result['failure'] or str(exc)
             event('monitor_error', reason=str(exc))
-        sleep(min(2, max(0, finish - clock())))
-    result['exit_code'] = process.poll()
+        timing.add(dict(operation='observation_cycle', start=cycle_start, end=clock(),
+                        duration=clock()-cycle_start, start_delay=max(0, cycle_start-next_observation),
+                        outcome='complete' if last >= cycle_start else 'incomplete'))
+        save('timings.jsonl', timing.take())
+        if timing.overflow:
+            result['failure'] = result['failure'] or 'timing_memory_limit'
+        next_observation = clock() + 2
+        sleep(min(.25, max(0, finish - clock())))
+    result['exit_code'] = poll()
     if result['exit_code'] is not None and not exit_recorded:
         event('browser_exited', exit_code=result['exit_code'])
+    save('timings.jsonl', timing.take())
     result['elapsed_seconds'] = clock() - start
     result['cleanup_required'] = result['exit_code'] is None or not helpers_verified
     return result
@@ -349,6 +413,51 @@ def review_r4_marker(root, latch, rows):
                 previous_evidence=str(evidence), authorization='Phase 1C-R5 section 8, one reviewed retry')
 
 
+R5_MARKER_SHA256 = '64d564e0812b88b8ed8f201a69e038f077600c1a3e461f6a34c41aaeafd6a4ef'
+
+
+def review_r5_marker(root, latch, rows):
+    if rows or hashlib.sha256(latch.read_bytes()).hexdigest() != R5_MARKER_SHA256:
+        raise ValueError('R5 marker changed or previous processes remain')
+    marker = json.loads(latch.read_text())
+    evidence = contained(root, Path(marker['evidence']).relative_to(root))
+    result = json.loads((evidence / 'result.json').read_text())
+    launch = json.loads((evidence / 'launch.json').read_text())
+    health = json.loads((evidence / 'final-health.json').read_text())
+    if (result != marker['result'] or result['exit_code'] != 0 or
+            result['failure'] != 'observation_delayed' or result['remaining'] or
+            result['watchdog'] or result['dumps'] or result['clean_shutdown'] != 'FAIL' or
+            result['pid'] != launch['pid'] or result['profile'] != launch['profile'] or
+            health['remaining']):
+        raise ValueError('R5 failure evidence is inconsistent')
+    hashes = {name: hashlib.sha256((evidence/name).read_bytes()).hexdigest()
+              for name in ('events.jsonl', 'samples.jsonl', 'launch.json', 'browser.log',
+                           'result.json', 'final-health.json')}
+    archive = contained(root, 'logs/TrinolLifecycle.r5-reviewed.json')
+    if archive.exists():
+        raise ValueError('R6 reviewed retry already consumed')
+    return dict(archive=str(archive), marker_sha256=R5_MARKER_SHA256,
+                previous_evidence=str(evidence), evidence_sha256=hashes,
+                authorization='Phase 1C-R6 section 12, one reviewed recovery')
+
+
+def runtime_guard(root, volume, expected_uuid, baseline, probe, timing):
+    device = root.stat().st_dev
+    def guard():
+        timing.call('mount_device_check', assert_mount, root, Path(volume.mount), device)
+        info = timing.call('apfs_uuid_diskutil', probe.disk, volume.device)
+        stat = timing.call('storage_capacity', os.statvfs, root)
+        free = stat.f_bavail * stat.f_frsize
+        if info.get('VolumeUUID') != expected_uuid or free <= 60 * GIB:
+            raise ValueError('Mount identity/capacity changed')
+        mem = timing.call('memory_and_swap', memory, probe)
+        if mem['pressure'] == 4 or mem['swap_bytes'] - baseline['swap_bytes'] >= 2 * GIB:
+            raise ValueError('Unsafe memory pressure/growth')
+        return dict(mem, volume_uuid=expected_uuid, available_bytes=free,
+                    observed_monotonic=timing.clock())
+    return guard
+
+
 def arm_latch(latch, run, retry):
     record = dict(evidence=str(run), state='in_progress', reviewed_retry=retry)
     if retry:
@@ -365,7 +474,7 @@ def arm_latch(latch, run, retry):
 
 
 def main():
-    global COMMAND_DEADLINE
+    global COMMAND_DEADLINE, TIMING
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--build-root', required=True, type=Path)
     parser.add_argument('--volume-uuid', required=True)
@@ -373,11 +482,14 @@ def main():
     parser.add_argument('--grace-seconds', type=int, default=30)
     parser.add_argument('--reviewed-r4-retry', action='store_true',
                         help='Consume only the exact failure reviewed by Phase 1C-R5')
+    parser.add_argument('--reviewed-r5-retry', action='store_true',
+                        help='Consume only the exact R5 failure reviewed by Phase 1C-R6')
     parser.add_argument('--workload', choices=('blank', 'browsing'), default='blank')
     args = parser.parse_args()
     if not 10 <= args.seconds <= 600 or not 10 <= args.grace_seconds <= 60:
         parser.error('Runtime must be 10..600 seconds; exit grace 10..60 seconds')
     process = None
+    writer = None
     try:
         if (platform.system(), platform.machine()) != ('Darwin', 'arm64'):
             raise ValueError('Native macOS arm64 required')
@@ -393,7 +505,9 @@ def main():
         # Share the build runner's lock: an authorized build cannot overlap.
         with build_lock(root):
             rows = snapshot(app)
-            retry = review_r4_marker(root, latch, rows) if args.reviewed_r4_retry else None
+            if args.reviewed_r4_retry:
+                raise ValueError('R4 recovery is retired; never reuse it for R6')
+            retry = review_r5_marker(root, latch, rows) if args.reviewed_r5_retry else None
             if latch.exists() and not retry:
                 raise ValueError('Prior lifecycle failure requires review: ' + str(latch))
             if rows:
@@ -405,35 +519,28 @@ def main():
             baseline = memory(probe)
             if baseline['pressure'] != 1:
                 raise ValueError('Normal idle memory pressure required')
-            run = Path(tempfile.mkdtemp(prefix='phase1cr5-lifecycle-', dir=logs))
+            run = Path(tempfile.mkdtemp(prefix='phase1cr6-lifecycle-', dir=logs))
             profile, crash = isolated_profile(root)
             device = root.stat().st_dev
 
-            def guard():
-                assert_mount(root, Path(volume.mount), device)
-                if (probe.disk(volume.device).get('VolumeUUID') != args.volume_uuid or
-                        os.statvfs(root).f_bavail * os.statvfs(root).f_frsize <= 60 * GIB):
-                    raise ValueError('Mount identity/capacity changed')
-                mem = memory(probe)
-                if mem['pressure'] == 4 or mem['swap_bytes'] - baseline['swap_bytes'] >= 2 * GIB:
-                    raise ValueError('Unsafe memory pressure/growth')
-                return dict(mem, volume_uuid=args.volume_uuid,
-                            available_bytes=os.statvfs(root).f_bavail * os.statvfs(root).f_frsize)
+            TIMING = Latency()
+            guard = runtime_guard(root, volume, args.volume_uuid, baseline, probe, TIMING)
 
             argv = [str(exe), '--user-data-dir=' + str(profile), '--no-first-run',
                     '--no-default-browser-check', 'about:blank']
             if args.workload == 'browsing':
                 fixture = run / 'rendering.html'
-                fixture.write_text('<!doctype html><title>R5 loading</title><h1>R5 local HTML</h1>'
+                fixture.write_text('<!doctype html><title>R6 loading</title><style>h1{color:green}</style><h1>R6 local HTML</h1>'
                     '<p id="result">Pending JavaScript</p><script>'
                     'document.querySelector("#result").textContent="PASS: JavaScript DOM updated";'
-                    'document.title="R5 JavaScript PASS";</script>')
+                    'document.title="R6 JavaScript PASS";</script>')
                 argv[-1:] = [fixture.as_uri(), 'https://example.com/']
             interrupted = []
             for sig in (signal.SIGINT, signal.SIGTERM):
                 signal.signal(sig, lambda *_: interrupted.append(True))
             guard()
             # A crash of this supervisor must also block the next launch.
+            writer = EvidenceWriter(root, run, device, TIMING)
             arm_latch(latch, run, retry)
             print('Evidence: ' + str(run), flush=True)
             with (run / 'browser.log').open('x') as log:
@@ -445,21 +552,25 @@ def main():
                                            stdin=subprocess.DEVNULL, stdout=log,
                                            stderr=subprocess.STDOUT, start_new_session=True)
                 launch_failure = None
-                try:
-                    (run / 'launch.json').write_text(json.dumps(dict(command=argv,
+                if not writer.submit('launch.json', dict(command=argv,
                         pid=process.pid, profile=str(profile), crash_directory=str(crash),
                         start_time_unix=time.time(), seconds=args.seconds,
                         grace_seconds=args.grace_seconds, baseline_memory=baseline,
                         volume_uuid=args.volume_uuid, reviewed_retry=retry,
-                        workload=args.workload), indent=2) + '\n')
-                except Exception as exc:
-                    launch_failure = 'launch_evidence_failed: ' + str(exc)
+                        workload=args.workload)):
+                    launch_failure = writer.error
                 result = supervise(process, profile, run, args.seconds, args.grace_seconds,
                                    lambda: snapshot(app), guard, native_quit,
                                    interrupted=lambda: bool(interrupted),
                                    inspect_app=native_application, started=started,
-                                   initial_failure=launch_failure,
-                                   evidence_guard=lambda: assert_mount(root, Path(volume.mount), device))
+                                   initial_failure=launch_failure, writer=writer, timing=TIMING,
+                                   fresh_sample=lambda: snapshot(app, process.pid))
+            if result.get('cleanup_required'):
+                print(json.dumps(dict(pid=process.pid, exit_code=result['exit_code'],
+                    action='Immediate native GUI cleanup required; no new launch')), flush=True)
+            result['evidence_writer'] = writer.finish(5)
+            result['failure'] = result['failure'] or result['evidence_writer']['error']
+            writer = None
             COMMAND_DEADLINE = None
             assert_mount(root, Path(volume.mount), device)
             result['watchdog'] = WATCHDOG in (run / 'browser.log').read_text(errors='replace').lower()
@@ -493,7 +604,10 @@ def main():
                               cleanup_required=process is not None and process.poll() is None)), flush=True)
         return 2 if process is None else 1
     finally:
+        if writer is not None:
+            print(json.dumps(dict(writer_cleanup=writer.finish(5))), flush=True)
         COMMAND_DEADLINE = None
+        TIMING = None
 
 
 if __name__ == '__main__':

@@ -452,7 +452,8 @@ class LifecycleTests(unittest.TestCase):
             for target, value in [('platform.system', 'Darwin'), ('platform.machine', 'arm64'),
                                   ('inspect_storage', volume), ('verify', []),
                                   ('verify_executable', self.exe), ('snapshot', list(rows)),
-                                  ('command', ''), ('MacProbe', probe), ('memory',
+                                  ('command', ''), ('MacProbe', probe), ('EvidenceWriter', Mock(error=None,
+                                   finish=Mock(return_value={'error': None}))), ('memory',
                                    {'pressure': 1, 'swap_bytes': 0}), ('supervise', result),
                                   ('assert_mount', None)]:
                 stack.enter_context(patch.object(life, target, return_value=value)
