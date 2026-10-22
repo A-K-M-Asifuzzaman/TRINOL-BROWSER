@@ -1058,3 +1058,23 @@ GN, signing, security or compiled-output changes occurred. Next: investigate
 per-operation monitoring/evidence-write latency before another reviewed retry.
 
 PHASE 1C-R5 PARTIAL — AWAITING ARCHITECT REVIEW
+
+## Phase 1C-R6 — improved observation; isolation gate failed
+
+The [R6 report](phase-1c-r6-observation-reliability.md) records the bounded writer,
+per-operation latency, exact R5 marker archive and one failed blank trial. The
+owned browser accepted Quit at 46.267 s, exited 0 at 48.657 s and its helpers
+were gone at 50.674 s. Maximum observation gap was 2.423 s; 78/78 evidence
+records were acknowledged with final flush, no drops, watchdog or isolated dump.
+
+The GUI app-selection call apparently started an unexpected second compiled-app
+instance without the test profile. The supervisor correctly failed isolation.
+The operator used normal Quit and all compiled-app processes were then absent;
+that second process's exit status is unknown. Browsing was NOT TESTED. A small
+offline-tested reporting correction now records unexpected identities and flags
+operator cleanup needs. All 184 repository tests pass. R5 recovery is consumed,
+the R6 failure marker remains active, and no further launch occurred. Existing
+build outputs, pins and GN arguments are preserved. Phase 1C remains PARTIAL;
+next review must establish a GUI observation route that cannot launch an app.
+
+PHASE 1C-R6 PARTIAL — AWAITING ARCHITECT REVIEW

@@ -7,11 +7,12 @@ TrinolIT branding and a distinct native interface. No Trinol customization is im
 **Phase 1C is partial; compilation and responsive browsing succeeded:** the
 preserved one-job build completed with exit 0. After a host restart, native
 Chromium 155.0.8059.85 rendered HTML/CSS/JavaScript, HTTPS and internal pages.
-R5 captured native Quit acceptance, browser exit 0 and complete helper cleanup,
-but a startup observation gap invalidated the bounded lifecycle trial. Repeatable
-clean shutdown remains unverified; further launches are blocked by the new failure
-marker. Source/tool pins and outputs remain preserved. Phase 2 awaits architect
-review; see the [R5 lifecycle report](docs/phase-1c-r5-lifecycle-validation.md).
+R6 captured native Quit acceptance, browser exit 0, owned helper cleanup and
+valid observation continuity, but an unexpected second instance invalidated the
+single-instance lifecycle. Operator cleanup removed all compiled-app processes.
+Repeatable clean shutdown remains unverified; the R6 failure marker blocks more
+launches. Source/tool pins and outputs remain preserved. Phase 2 awaits architect
+review; see the [R6 report](docs/phase-1c-r6-observation-reliability.md).
 
 This repository contains Trinol-owned changes, documentation, configuration
 examples and validation. The Chromium checkout, depot_tools and build outputs

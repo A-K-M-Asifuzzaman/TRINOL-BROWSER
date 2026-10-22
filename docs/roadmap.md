@@ -23,9 +23,17 @@ browser-main GPU destruction wait, but did not establish its underlying cause.
 R5 archived the reviewed R4 marker and captured accepted native Quit, browser
 exit 0 and complete helper cleanup in one blank session. A 36.95-second startup
 observation gap invalidated that trial; no second session was eligible. The
-R5 failure marker remains active. See the
+R5 failure marker was subsequently archived by R6. See the
 [R5 lifecycle report](phase-1c-r5-lifecycle-validation.md) for the event timeline,
 monitoring limits and next engineering action. No Chromium rebuild or source
 patch was performed. Repeatable valid bounded shutdown remains unverified.
 Phase 2 still requires new explicit instruction after architect review.
 No product UI, AI integration, signing setup or distribution is implemented.
+
+R6 improved the maximum observation gap to 2.423 seconds with acknowledged final
+evidence flush. Its owned browser exited 0, but GUI app selection apparently
+started an unexpected second instance. This failed the isolation gate; the
+operator used normal Quit and all compiled-app processes were then absent. The
+conditional browsing trial was not eligible. The R6 failure marker blocks more
+launches pending review of an observation route that cannot launch an app. See
+the [R6 report](phase-1c-r6-observation-reliability.md). Phase 1C remains PARTIAL.

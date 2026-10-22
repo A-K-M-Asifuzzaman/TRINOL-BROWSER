@@ -355,6 +355,65 @@
         "physical_available_bytes": 270300246016,
         "remaining_processes": 0
       }
+    },
+    "runtime_recovery_r6": {
+      "phase": "1c-r6",
+      "status": "partial_unexpected_compiled_app_process",
+      "date": "2026-10-23",
+      "report": "docs/phase-1c-r6-observation-reliability.md",
+      "evidence_directory": "logs/phase1cr6-lifecycle-6kd2mrf5",
+      "source_changed": false,
+      "compilation_run": false,
+      "reviewed_r5_marker_sha256": "64d564e0812b88b8ed8f201a69e038f077600c1a3e461f6a34c41aaeafd6a4ef",
+      "previous_marker_archive": "logs/TrinolLifecycle.r5-reviewed.json",
+      "recovery_consumed": true,
+      "failure_marker": "logs/TrinolLifecycle.blocked.json",
+      "failure_marker_sha256": "ccc213f095ea07c8dc20fa086a00d87ce4297645a29a5b82bafbd6debdea5655",
+      "runtime": {
+        "harness_launches": 1,
+        "unexpected_gui_launches": 1,
+        "pid": 84236,
+        "profile_directory": "test-profile-r6-96cf7hzc",
+        "browser_exit_code": 0,
+        "supervisor_exit_code": 1,
+        "native_quit_accepted": true,
+        "quit_elapsed_seconds": 46.26738987499266,
+        "browser_exit_observed_seconds": 48.65717141699861,
+        "owned_helpers_exited_seconds": 50.674035417003324,
+        "max_observation_gap_seconds": 2.4232742080057506,
+        "max_poll_gap_seconds": 0.4243835830129683,
+        "watchdog_observed": false,
+        "new_isolated_dump_observed": false,
+        "lifecycle_verdict": "FAIL",
+        "failure": "unexpected_compiled_app_process",
+        "unexpected_pid": 84954,
+        "unexpected_exit_code": null,
+        "operator_normal_quit_cleanup": true,
+        "final_compiled_app_process_count": 0,
+        "browsing_session": "NOT TESTED",
+        "further_launches_blocked": true
+      },
+      "evidence_writer": {
+        "submitted": 78,
+        "acknowledged": 78,
+        "dropped": 0,
+        "flushed": true,
+        "peak_queue_bytes": 48477,
+        "max_execution_seconds": 2.180407625011867,
+        "error": null
+      },
+      "offline_test_count": 184,
+      "post_trial_reporting_fix_native_verified": false,
+      "final_health": {
+        "pressure": 2,
+        "swap_bytes": 4381736960,
+        "physical_available_bytes": 269733818368,
+        "remaining_processes": 0
+      },
+      "r5_gap_specific_cause_confirmed": false,
+      "underlying_r3_shutdown_cause": "UNRESOLVED",
+      "repeatable_bounded_shutdown_verified": false,
+      "phase_2_authorized": false
     }
   }
 }
