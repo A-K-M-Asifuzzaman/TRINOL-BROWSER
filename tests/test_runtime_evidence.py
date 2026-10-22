@@ -193,14 +193,17 @@ class EvidenceTests(unittest.TestCase):
             marker.write_bytes(raw)
             with self.assertRaises(ValueError):life.review_r5_marker(self.root,marker,[])
 
-    def simulate(self, slow=None, writer_error=None, u_gap=False):
+    def simulate(self, slow=None, writer_error=None, u_gap=False, unexpected=False):
         now=[0.];t=Latency(lambda:now[0]);p=Mock(pid=123,poll=lambda:0 if now[0]>=18 else None)
         profile=self.root/'profile';exe=self.root/'Chromium.app/bin'
         row=dict(pid=123,ppid=1,state='S',start='original',executable=str(exe),
                  command=str(exe)+' --user-data-dir='+str(profile))
         def sample():
             if slow and now[0]<3:now[0]+=16
-            return [dict(row,state='U' if u_gap else 'S')] if now[0]<18 else []
+            rows = [dict(row,state='U' if u_gap else 'S')] if now[0]<18 else []
+            if unexpected:
+                rows.append(dict(row, pid=456, command=str(exe)))
+            return rows
         w=Mock(error=writer_error,submit=Mock(return_value=not writer_error))
         r=life.supervise(p,profile,self.run,10,15,sample,Mock(),Mock(return_value='accepted'),
             clock=lambda:now[0],sleep=lambda n:now.__setitem__(0,now[0]+n),timing=t,writer=w)
@@ -228,6 +231,16 @@ class EvidenceTests(unittest.TestCase):
         r=self.simulate(slow=True,u_gap=True)
         self.assertFalse(r['persistent_uninterruptible'])
         self.assertEqual(r['failure'],'observation_delayed')
+
+    def test_unexpected_process_requires_operator_cleanup_without_adoption(self):
+        r = self.simulate(unexpected=True)
+        self.assertEqual(r['exit_code'], 0)
+        self.assertEqual(r['failure'], 'unexpected_compiled_app_process')
+        self.assertFalse(r['remaining'])
+        self.assertEqual(r['unexpected_remaining'][0]['pid'], 456)
+        self.assertTrue(r['cleanup_required'])
+        event = next(e for e in r['events'] if e['event']=='unexpected_compiled_app_process')
+        self.assertNotIn('command', event['processes'][0])
 
 
 if __name__=='__main__': unittest.main()

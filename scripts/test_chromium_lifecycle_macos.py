@@ -216,7 +216,7 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
     result = dict(pid=process.pid, exit_code=None, quit_requested=False,
                   quit_attempts=0, quit_errors=[], failure=initial_failure,
                   uninterruptible_observed=False, persistent_uninterruptible=False,
-                  remaining=[], events=[])
+                  remaining=[], unexpected_remaining=[], events=[])
     next_quit, last = deadline, start
     next_observation = start
     last_poll = start
@@ -294,6 +294,11 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
             last = now
             owned = timing.call('process_ownership', owned_processes, rows, profile, known)
             result['remaining'] = owned
+            unexpected = [{k: r[k] for k in ('pid', 'ppid', 'state', 'start', 'executable')}
+                          for r in rows if r not in owned]
+            if unexpected and not result['unexpected_remaining']:
+                event('unexpected_compiled_app_process', processes=unexpected)
+            result['unexpected_remaining'] = unexpected
             if original is None:
                 original = next((r for r in owned if r['pid'] == process.pid), None)
                 if original:
@@ -382,7 +387,8 @@ def supervise(process, profile, run, seconds, grace, sample, guard, quit_app,
         event('browser_exited', exit_code=result['exit_code'])
     save('timings.jsonl', timing.take())
     result['elapsed_seconds'] = clock() - start
-    result['cleanup_required'] = result['exit_code'] is None or not helpers_verified
+    result['cleanup_required'] = (result['exit_code'] is None or not helpers_verified or
+                                  bool(result['unexpected_remaining']))
     return result
 
 
