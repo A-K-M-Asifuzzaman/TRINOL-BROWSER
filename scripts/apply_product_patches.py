@@ -120,7 +120,7 @@ def expected_outputs(product, checkout, manifest):
     patches, files = product_contract(product, manifest)
     with scratch_index(checkout) as env:
         for patch in patches:
-            git(checkout, 'apply', '--cached', '--check', str(patch), env=env)
+            git(checkout, 'apply', '--whitespace=error-all', '--cached', '--check', str(patch), env=env)
             git(checkout, 'apply', '--cached', str(patch), env=env)
         entries = git(checkout, 'ls-files', '--stage', '-z', '--', *files, env=env) if files else ''
         index = {}
@@ -235,7 +235,7 @@ def apply_contract(product, checkout, apply=False):
     try:
         if apply:
             for name, patch in zip(entries, patches):
-                git(checkout, 'apply', '--check', str(patch))
+                git(checkout, 'apply', '--whitespace=error-all', '--check', str(patch))
                 git(checkout, 'apply', str(patch))
                 applied.append('patches/' + name)
             for source, target in overlays:

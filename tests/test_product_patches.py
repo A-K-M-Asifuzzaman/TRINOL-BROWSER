@@ -143,6 +143,14 @@ class PatchTests(unittest.TestCase):
         target.unlink();target.symlink_to(self.product/'logo.svg')
         with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
 
+    def test_added_source_whitespace_is_rejected(self):
+        target=self.product/'patches/second.patch'
+        target.write_text(target.read_text().replace('+three\n','+three \n'))
+        self.declare()
+        with self.assertRaises(subprocess.CalledProcessError) as error:
+            expected_outputs(self.product,self.checkout,self.manifest)
+        self.assertIn('whitespace',error.exception.stderr)
+
     def test_partial_write_failure_reports_completed_patches(self):
         import apply_product_patches as module
         real_git=module.git

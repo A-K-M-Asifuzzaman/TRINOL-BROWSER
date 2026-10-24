@@ -443,14 +443,14 @@
     "patches": [
       {
         "path": "0001-orbit-baseline-native-colors.patch",
-        "sha256": "e3773d9c97cb5bae2f17dbb133036dfdec9046c0533cf023eebbcdc67507b60d"
+        "sha256": "4ed73a62d513c4fd82ab640c042f1e22297f7891c3eb688ee4766dec6139b581"
       }
     ],
     "files": [
       {
         "path": "chrome/browser/ui/color/chrome_color_mixers.cc",
         "mode": "100644",
-        "sha256": "cb956000a3deaabb0d357848a09b4d74fafcf710dd3ceb6c02b8efb441941672"
+        "sha256": "707dbc9509fe73b70804aae01d977de77a84a6971216b760fa9c38671b2727be"
       },
       {
         "path": "chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc",

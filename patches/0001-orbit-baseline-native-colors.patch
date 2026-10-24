@@ -8,7 +8,7 @@
  #include "chrome/browser/ui/color/chrome_color_id.h"
  #include "chrome/browser/ui/color/chrome_color_mixer.h"
  #include "chrome/browser/ui/color/chrome_color_provider_utils.h"
-@@ -23,7 +24,11 @@
+@@ -23,7 +24,12 @@
  #include "chrome/browser/ui/color/omnibox_color_mixer.h"
  #include "chrome/browser/ui/color/product_specifications_color_mixer.h"
  #include "chrome/browser/ui/color/tab_strip_color_mixer.h"
@@ -16,11 +16,12 @@
 +#include "ui/color/color_mixer.h"
 +#include "ui/color/color_provider.h"
  #include "ui/color/color_provider_utils.h"
++#include "ui/color/color_recipe.h"
 +#include "ui/color/color_transform.h"
  
  namespace {
  
-@@ -65,6 +70,87 @@
+@@ -65,6 +71,87 @@
  // .inc file serves to undefine the macros the first inclusion defined.
  #include "ui/color/color_id_map_macros.inc"
  
@@ -108,7 +109,7 @@
  }  // namespace
  
  void AddChromeColorMixers(ui::ColorProvider* provider,
-@@ -85,8 +171,12 @@
+@@ -85,8 +172,12 @@
    AddMaterialSidePanelColorMixer(provider, key);
    AddMaterialTabStripColorMixer(provider, key);
  
