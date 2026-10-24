@@ -52,6 +52,21 @@ cleanup and valid continuity. The exact original R6 bytes are archived. Its UI
 trial exposed a frame eligibility error; the corrected palette compiled but has
 not been launched. Preserve the archive; no further native session is authorized.
 
+Phase 2B1-V separately authorizes ONE corrected-library visual trial through
+`--phase-2b1v-visual --operator-present --window-observer /exact/reviewed/utility`.
+Require the exact previous successful 2B1 evidence and unchanged historical
+archives, corrected library/launcher/GN/source identities, tested nonlaunching
+WindowServer observation, normal host health and fresh present/unlocked operator.
+Under the shared lock, exclusively create the permanent
+`TrinolLifecycle.phase2b1v-authorization.json` claim before the active guard.
+Never delete the claim or reuse any older retry flag. Retain the final active
+guard for visual review even after lifecycle PASS; a later run requires a new
+reviewed authorization. No Phase 2B2 or additional UI feature is authorized.
+The operator is currently unavailable and explicitly requested runtime remain
+untested. Do not launch or consume 2B1-V authorization without fresh present/
+unlocked operator confirmation. The native test object compiled; four C++ tests
+remain unexecuted.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns

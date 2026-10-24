@@ -7,7 +7,7 @@
 | 1B — approved | Approved storage path, exact verified source/tool pins, Chromium checkout and toolchain | Successful dependency sync, matching SHAs, SDK compatibility and checkout evidence |
 | 1C — partial; responsive browsing verified, bounded shutdown gate incomplete | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
 | 2A — approved UI foundation | Independently authorized design system, runnable interactive prototype, screenshots and native integration contract | Prototype checks and captures; native checkout and R6 marker preserved |
-| 2B1 — PARTIAL; native slice implemented, corrected visual validation pending | Native Orbit color integration and exact patched-tree verification | Initial incremental build and one bounded browsing lifecycle passed; frame eligibility correction needs visual review |
+| 2B1 — PARTIAL; corrected visual validation blocked by operator availability | Native Orbit colors and exact patched-tree verification | Corrected artifact verified; C++ test object compiled; test execution and corrected runtime visual checks outstanding |
 | 2B2 — proposed; separate approval required | Next selected native slice | First validate corrected baseline colors with separate runtime authorization; review resources/layout before expanding |
 | 3 — proposed | Native UI redesign and trusted internal surfaces | Browser/WebUI, accessibility, keyboard and functional regression checks |
 | Later — proposed | Workspaces, split view, command palette, optional AI/sync | Separate designs, privacy/security tests and measured performance |
@@ -53,3 +53,11 @@ continuity, while exposing a macOS frame-guard error. The correction is kept in
 the ordered patch series. No second native launch is permitted. Phase 1C stays
 PARTIAL: repeated independent lifecycle evidence and the original GPU teardown
 uncertainty remain unresolved. Phase 2B2 is not authorized.
+
+Phase 2B1-V completed offline gate/capture regression coverage and the existing
+C++ test-object compilation with 266 actions, exit 0. Its full unit_tests binary
+requires 7,100 actions and remains deferred. The operator requested no runtime
+while unavailable, so the exact one-use visual authorization remains unconsumed
+and no corrected native screenshot/exit event exists. See the
+[visual-validation report](phase-2b1-v-native-visual-validation.md). Resume only
+with fresh operator availability and revalidated safety/evidence; no Phase 2B2.

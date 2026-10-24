@@ -22,6 +22,13 @@ guard. The source correction compiled successfully; its regression case is track
 in the [native report](docs/phase-2b1-native-shell-report.md); corrected Orbit appearance
 has not been launched. No Phase 2B2 is authorized.
 
+**Phase 2B1-V is PARTIAL:** the corrected artifact, previous trial and archives
+passed offline verification. The existing C++ test translation unit compiled
+successfully (266 actions, exit 0), but the four tests have not executed. The
+operator is unavailable and requested runtime remain untested: zero new native
+launches or captures, authorization unconsumed. See the
+[validation report](docs/phase-2b1-v-native-visual-validation.md).
+
 **Phase 2A design foundation was approved**, independently authorized
 while Phase 1C remains partial. Run `python3 design/prototype/serve.py` and open
 [Trinol Orbit](http://127.0.0.1:4173/prototype/). The interactive preview includes

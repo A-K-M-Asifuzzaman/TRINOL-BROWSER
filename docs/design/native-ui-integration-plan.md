@@ -120,3 +120,14 @@ Native geometry, toolbar bindings and tab ownership remain unchanged.
 Corrected colors still require separately authorized native visual acceptance.
 Production WebUI, logo resource placement, sidebar/workspace/palette and packaging
 remain deferred. Phase 1C stays PARTIAL; no Phase 2B2 is authorized.
+
+## Phase 2B1-V verification checkpoint
+
+The corrected two-patch source/library identity is verified and the existing
+Orbit test translation unit compiled through the one-job guarded object mode.
+The four tests have not executed; full unit_tests needs 7,100 actions. The exact
+one-use visual gate and identity-checked WindowServer/screencapture path have
+synthetic regression coverage. Runtime was not attempted because the operator
+was unavailable and explicitly requested it remain untested. No corrected
+native palette, key state, theme/accessibility or functional acceptance is
+claimed. See the [checkpoint report](../phase-2b1-v-native-visual-validation.md).

@@ -321,3 +321,13 @@ roadmap, upstream workflow, native integration plan and two reviewed native
 captures with their provenance/hashes. Chromium source/binaries, raw dumps,
 profiles and detailed machine logs remain outside Git. Final delivered commit
 and exact-commit CI evidence are reported in the completion message.
+
+## Phase 2B1-V follow-up — 2026-10-25
+
+[The follow-up report](phase-2b1-v-native-visual-validation.md) records exact
+corrected-library/source/GN verification and successful compilation of the four
+existing tests' translation unit: 266 guarded actions, exit 0. The full test
+executable would require 7,100 actions and remains deferred; no test execution
+is claimed. Operator unavailability blocked the corrected visual trial, as
+explicitly requested. No new browser launch/capture or authorization consumption
+occurred. Historical findings above remain unchanged; Phase 2B1 stays PARTIAL.
