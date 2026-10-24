@@ -6,6 +6,7 @@ import re
 import subprocess
 
 from verify_upstream_checkout import validate_manifest
+from apply_product_patches import product_contract
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -13,10 +14,7 @@ ROOT = Path(__file__).resolve().parents[1]
 def main():
     manifest = json.loads((ROOT / 'upstream/manifest.json').read_text())
     validate_manifest(manifest)
-    series = ROOT / manifest['patch_series']
-    assert series.is_file()
-    assert not [line for line in series.read_text().splitlines()
-                if line.strip() and not line.lstrip().startswith('#')]
+    product_contract(ROOT, manifest)
     files = subprocess.check_output(
         ['git', 'ls-files', '-z', '--cached', '--others', '--exclude-standard'],
         cwd=ROOT).decode().split('\0')
@@ -32,7 +30,7 @@ def main():
                 if '://' in target or target.startswith('#'):
                     continue
                 assert (path.parent / target.split('#')[0]).exists(), f'{name}: broken link {target}'
-    print(f'PASS: Phase {manifest["phase"]} manifest, empty customization contract, file bounds, '
+    print(f'PASS: Phase {manifest["phase"]} manifest, declared customization contract, file bounds, '
           f'and local links in {markdown_count} Markdown files')
     print('Not a secret scanner, Chromium build, or browser test.')
 

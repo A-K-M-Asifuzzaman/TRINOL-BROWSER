@@ -310,5 +310,23 @@ class FilesystemTests(unittest.TestCase):
         self.assertTrue((self.root/'chrome-target.json').is_file())
 
 
+class NativeGateTests(unittest.TestCase):
+    def test_uuid_job_generation_and_process_guards(self):
+        args=SimpleNamespace(generate=False,jobs=1)
+        volume=SimpleNamespace(device='fixture')
+        probe=Mock();probe.disk.return_value={'VolumeUUID':b.EXPECTED_VOLUME_UUID};probe.command.return_value=b'/usr/bin/python3\n'
+        b.verify_build_gate(args,{'customization':{'id':'orbit'}},volume,probe)
+        for bad in ('siso','ninja','clang','Chromium'):
+            probe.command.return_value=('/fixture/'+bad+'\n').encode()
+            with self.subTest(process=bad),self.assertRaises(ValueError):b.verify_build_gate(args,{},volume,probe)
+        probe.command.return_value=b''
+        args.jobs=2
+        with self.assertRaises(ValueError):b.verify_build_gate(args,{'customization':True},volume,probe)
+        args.jobs=1;args.generate=True
+        with self.assertRaises(ValueError):b.verify_build_gate(args,{'customization':True},volume,probe)
+        args.generate=False;probe.disk.return_value={'VolumeUUID':'wrong'}
+        with self.assertRaises(ValueError):b.verify_build_gate(args,{},volume,probe)
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
-from apply_product_patches import apply_contract, ContractError, git
+from apply_product_patches import apply_contract, ContractError, git, verify_source_state, expected_outputs
 
 
 class PatchTests(unittest.TestCase):
@@ -32,6 +32,16 @@ class PatchTests(unittest.TestCase):
         for name, before, after in [('first','one','two'),('second','two','three')]:
             (self.product/f'patches/{name}.patch').write_text(
                 f'diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n@@ -1 +1 @@\n-{before}\n+{after}\n')
+        self.declare()
+
+    def declare(self):
+        self.manifest['customization']={'schema_version':1,'id':'synthetic-test',
+            'upstream_revision':self.manifest['chromium']['revision'],
+            'patches':[{'path':name,'sha256':hashlib.sha256((self.product/'patches'/name).read_bytes()).hexdigest()}
+                       for name in ('first.patch','second.patch')],
+            'files':[{'path':'file.txt','mode':'100644','sha256':hashlib.sha256(b'three\n').hexdigest()}]+
+              [{'path':e['destination'],'mode':'100644','sha256':e['sha256']} for e in self.manifest['overlays']]}
+        self.save()
 
     def save(self):
         (self.product/'upstream/manifest.json').write_text(json.dumps(self.manifest))
@@ -67,7 +77,7 @@ class PatchTests(unittest.TestCase):
     def overlay(self):
         source=self.product/'logo.svg';source.write_text('<svg/>')
         self.manifest['overlays']=[{'source':'logo.svg','destination':'trinol/assets/logo.svg',
-                                  'sha256':hashlib.sha256(source.read_bytes()).hexdigest()}];self.save()
+                                  'sha256':hashlib.sha256(source.read_bytes()).hexdigest()}];self.declare()
         return source
 
     def test_overlay_new_file_and_digest_validation(self):
@@ -87,7 +97,7 @@ class PatchTests(unittest.TestCase):
 
     def test_invalid_second_patch_does_not_mutate_checkout(self):
         (self.product/'patches/second.patch').write_text('broken')
-        with self.assertRaises(subprocess.SubprocessError):apply_contract(self.product,self.checkout,True)
+        with self.assertRaises((ContractError, subprocess.SubprocessError)):apply_contract(self.product,self.checkout,True)
         self.assertEqual((self.checkout/'file.txt').read_text(),'one\n')
 
     def test_symlink_and_generated_target_patch_refused(self):
@@ -96,6 +106,42 @@ class PatchTests(unittest.TestCase):
         with self.assertRaises(ContractError):apply_contract(self.product,self.checkout)
         patchfile.write_text('diff --git a/out/a b/out/a\nnew file mode 100644\n--- /dev/null\n+++ b/out/a\n@@ -0,0 +1 @@\n+x\n')
         with self.assertRaises(ContractError):apply_contract(self.product,self.checkout)
+
+    def test_pristine_and_applied_are_distinct(self):
+        self.assertEqual(verify_source_state(self.product,self.checkout,self.manifest,'pristine'),'pristine')
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
+        apply_contract(self.product,self.checkout,True)
+        self.assertEqual(verify_source_state(self.product,self.checkout,self.manifest),'applied')
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest,'pristine')
+
+    def test_applied_state_rejects_extra_tampered_missing_and_mode_changes(self):
+        apply_contract(self.product,self.checkout,True)
+        target=self.checkout/'file.txt'
+        for data in ('unreviewed\n','one\n'):
+            target.write_text(data)
+            with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
+        target.write_text('three\n');target.chmod(0o755)
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
+        target.chmod(0o644)
+        other=self.checkout/'unexpected.cc';other.write_text('unknown')
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
+        self.assertEqual(other.read_text(),'unknown')
+
+    def test_output_inventory_and_patch_digest_cannot_authorize_arbitrary_content(self):
+        self.manifest['customization']['files'][0]['sha256']='0'*64;self.save()
+        with self.assertRaises(ContractError):expected_outputs(self.product,self.checkout,self.manifest)
+        self.declare();self.manifest['customization']['patches'][0]['sha256']='0'*64;self.save()
+        with self.assertRaises(ContractError):expected_outputs(self.product,self.checkout,self.manifest)
+        self.declare();self.manifest['customization']['files'].append({'path':'unrelated','mode':'100644','sha256':'0'*64});self.save()
+        with self.assertRaises(ContractError):expected_outputs(self.product,self.checkout,self.manifest)
+
+    def test_overlay_applied_state_rejects_symlink_and_tampering(self):
+        self.overlay();apply_contract(self.product,self.checkout,True)
+        self.assertEqual(verify_source_state(self.product,self.checkout,self.manifest),'applied')
+        target=self.checkout/'trinol/assets/logo.svg';target.write_text('changed')
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
+        target.unlink();target.symlink_to(self.product/'logo.svg')
+        with self.assertRaises(ContractError):verify_source_state(self.product,self.checkout,self.manifest)
 
     def test_partial_write_failure_reports_completed_patches(self):
         import apply_product_patches as module

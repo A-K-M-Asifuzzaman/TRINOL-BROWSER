@@ -16,6 +16,8 @@ import time
 from check_chromium_build_storage import GIB, InspectionError, MacProbe, capacity
 from verify_upstream_checkout import ROOT, verify
 
+EXPECTED_VOLUME_UUID = '47F505A1-126A-4EC6-8DB6-135813AA6111'
+
 EXPECTED = {'target_os': '"mac"', 'target_cpu': '"arm64"', 'is_debug': 'false',
             'is_component_build': 'true', 'symbol_level': '1',
             'is_official_build': 'false', 'use_remoteexec': 'false'}
@@ -283,6 +285,16 @@ def run_build(args, root, paths, volume, probe, lock_fd):
     return 0
 
 
+def verify_build_gate(args, manifest, volume, probe):
+    if probe.disk(volume.device).get('VolumeUUID') != EXPECTED_VOLUME_UUID:
+        raise ValueError('Unexpected external APFS UUID')
+    if manifest.get('customization') and (args.generate or args.jobs != 1):
+        raise ValueError('Native Orbit slice requires preserved GN output and one build job')
+    commands = probe.command('/bin/ps', '-axo', 'comm=').decode().splitlines()
+    if any(Path(p.strip()).name in ('siso', 'ninja', 'autoninja', 'clang', 'clang++', 'Chromium') for p in commands):
+        raise ValueError('Build/browser process is active; no overlapping build')
+
+
 def main():
     args = parse_args()
     try:
@@ -295,6 +307,7 @@ def main():
         manifest = json.loads((ROOT / 'upstream/manifest.json').read_text())
         for line in verify(manifest, root / 'chromium', paths['depot_tools']): print(line, flush=True)
         probe = MacProbe(); volume = probe.volume(root)
+        verify_build_gate(args, manifest, volume, probe)
         free = capacity(volume, probe, probe.images(), lambda *line: print(*line, flush=True))
         if volume.filesystem != 'apfs' or not volume.writable or not Path(volume.mount).is_mount():
             raise ValueError('Build requires mounted writable APFS')

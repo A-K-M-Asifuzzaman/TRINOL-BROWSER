@@ -35,8 +35,15 @@ def validate_manifest(manifest):
                 raise ValueError(f'{name} needs a full lowercase commit SHA')
         elif revision is not None:
             raise ValueError('Pre-checkout phases must retain null revision pins')
-    if manifest.get('patch_series') != 'patches/series' or manifest.get('overlays') != []:
-        raise ValueError('Baseline must retain the empty customization contract')
+    if manifest.get('patch_series') != 'patches/series' or not isinstance(manifest.get('overlays'), list):
+        raise ValueError('Invalid customization declarations')
+    if 'customization' not in manifest and manifest['overlays']:
+        raise ValueError('Overlays require an explicit customization contract')
+    if 'customization' in manifest:
+        contract = manifest['customization']
+        if (not isinstance(contract, dict) or contract.get('schema_version') != 1 or
+                contract.get('upstream_revision') != manifest['chromium']['revision']):
+            raise ValueError('Customization must pin the same upstream revision')
     if phase in ('1b', '1c'):
         chromium = manifest['chromium']
         version = chromium.get('version', '')
@@ -78,7 +85,9 @@ def release_version(source):
     return '.'.join(entries[key] for key in ('MAJOR', 'MINOR', 'BUILD', 'PATCH'))
 
 
-def verify(manifest, checkout_root, depot_tools):
+def verify(manifest, checkout_root, depot_tools, *, product_root=None, source_state='applied'):
+    from apply_product_patches import product_contract, verify_source_state
+    product_root = ROOT if product_root is None else Path(product_root).resolve()
     validate_manifest(manifest)
     if manifest['phase'] not in ('1b', '1c'):
         raise ValueError('Manifest has no verified Phase 1B checkout yet')
@@ -95,6 +104,7 @@ def verify(manifest, checkout_root, depot_tools):
     for marker in ('.gclient', '.gclient_entries'):
         if not (checkout_root / marker).is_file():
             raise ValueError(f'Missing gclient checkout metadata: {marker}')
+    product_contract(product_root, manifest)
     for name, path in (('chromium', source), ('depot_tools', depot)):
         if Path(git(path, 'rev-parse', '--show-toplevel')).resolve() != path.resolve():
             raise ValueError(f'{name} directory is not its Git root')
@@ -102,8 +112,15 @@ def verify(manifest, checkout_root, depot_tools):
             raise ValueError(f'{name} origin mismatch')
         if git(path, 'rev-parse', 'HEAD') != manifest[name]['revision']:
             raise ValueError(f'{name} HEAD mismatch')
-        if git(path, 'status', '--porcelain', '--untracked-files=no'):
-            raise ValueError(f'{name} has tracked modifications')
+        if name != 'chromium' or not manifest.get('customization') or source_state == 'pristine':
+            untracked = 'no' if name == 'depot_tools' else 'all'
+            if git(path, 'status', '--porcelain', '--untracked-files=' + untracked):
+                raise ValueError(f'{name} has tracked modifications or untracked files')
+    if source_state not in ('pristine', 'applied'):
+        raise ValueError('Unknown source state')
+    state = 'pristine'
+    if manifest.get('customization') and source_state == 'applied':
+        state = verify_source_state(product_root, source, manifest)
     if git(source, 'rev-parse', manifest['chromium']['tag'] + '^{commit}') != manifest['chromium']['revision']:
         raise ValueError('Local release tag does not resolve to pinned source')
     if release_version(source) != manifest['chromium']['version']:
@@ -117,7 +134,7 @@ def verify(manifest, checkout_root, depot_tools):
     return [f'Chromium {manifest["chromium"]["version"]}: {manifest["chromium"]["revision"]}',
             f'depot_tools: {manifest["depot_tools"]["revision"]}',
             f'DEPS SHA-256: {digest}',
-            'Tracked source/tool files are clean; this verifier does not run builds.',
+            f'Source state: {state}; tools tracked files clean; source has no undeclared tracked/nonignored untracked files.',
             'Dependency/hook completion is recorded evidence; this check does not rerun sync '
             'or prove every dependency remains unchanged.']
 
@@ -127,10 +144,11 @@ def main():
     parser.add_argument('--manifest', type=Path, default=ROOT / 'upstream/manifest.json')
     parser.add_argument('--checkout-root', required=True)
     parser.add_argument('--depot-tools', required=True)
+    parser.add_argument('--source-state', choices=('pristine', 'applied'), default='applied')
     args = parser.parse_args()
     try:
         manifest = json.loads(args.manifest.read_text())
-        for line in verify(manifest, args.checkout_root, args.depot_tools):
+        for line in verify(manifest, args.checkout_root, args.depot_tools, source_state=args.source_state):
             print('PASS:', line)
         return 0
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:

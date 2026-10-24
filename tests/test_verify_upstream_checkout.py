@@ -109,6 +109,8 @@ class CheckoutTests(unittest.TestCase):
         for name in ('chrome','content','components','third_party','build'): (self.source/name).mkdir()
         (self.source/'chrome/VERSION').write_text('MAJOR=155\nMINOR=0\nBUILD=1\nPATCH=2\n')
         (self.source/'DEPS').write_bytes(b'fixture DEPS')
+        self.product=self.root/'product'; (self.product/'patches').mkdir(parents=True)
+        (self.product/'patches/series').write_text('# empty baseline\n')
         self.data=manifest()
         self.overrides={}
         fake=patch.object(v,'git',side_effect=self.git);fake.start();self.addCleanup(fake.stop)
@@ -123,7 +125,7 @@ class CheckoutTests(unittest.TestCase):
         if args[0]=='status':return ''
         raise AssertionError(args)
 
-    def verify(self):return v.verify(self.data,self.checkout,self.depot)
+    def verify(self):return v.verify(self.data,self.checkout,self.depot,product_root=self.product)
 
     def test_valid_fixture(self):self.assertEqual(len(self.verify()),5)
 
@@ -132,8 +134,24 @@ class CheckoutTests(unittest.TestCase):
         with self.assertRaisesRegex(ValueError,'HEAD mismatch'):self.verify()
 
     def test_tracked_changes(self):
-        self.overrides[(self.source,('status','--porcelain','--untracked-files=no'))]=' M DEPS'
+        self.overrides[(self.source,('status','--porcelain','--untracked-files=all'))]=' M DEPS'
         with self.assertRaisesRegex(ValueError,'tracked modifications'):self.verify()
+
+    def test_untracked_source_and_modified_tool_source_rejected(self):
+        self.overrides[(self.source,('status','--porcelain','--untracked-files=all'))]='?? unexpected.cc'
+        with self.assertRaises(ValueError):self.verify()
+        self.overrides.clear()
+        self.overrides[(self.depot,('status','--porcelain','--untracked-files=no'))]=' M autoninja.py'
+        with self.assertRaises(ValueError):self.verify()
+
+    def test_customized_build_verification_requires_exact_applied_state(self):
+        self.data['customization']={'schema_version':1,'id':'fixture',
+            'upstream_revision':self.data['chromium']['revision'],'patches':[],'files':[]}
+        with patch('apply_product_patches.verify_source_state',side_effect=ValueError('unauthorized contents')) as check:
+            with self.assertRaisesRegex(ValueError,'unauthorized'):self.verify()
+            check.assert_called_once()
+        with patch('apply_product_patches.verify_source_state',return_value='applied'):
+            self.assertIn('Source state: applied',self.verify()[3])
 
     def test_actual_origin_mismatch(self):
         self.overrides[(self.depot,('remote','get-url','origin'))]='https://example.com'
