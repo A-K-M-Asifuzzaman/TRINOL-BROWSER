@@ -1,1 +1,2 @@
-# Ordered patch paths relative to patches/. No Chromium modifications in Phase 0.
+# Ordered patches against the pinned Chromium source.
+0001-orbit-baseline-native-colors.patch

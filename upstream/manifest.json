@@ -435,5 +435,28 @@
     "native_browser_launched": false,
     "r6_failure_marker_preserved": true,
     "next_phase_authorized": false
+  },
+  "customization": {
+    "schema_version": 1,
+    "id": "orbit-native-shell-v1",
+    "upstream_revision": "0e66b94549a8bd85f03fbdf189b752d6e7b63c32",
+    "patches": [
+      {
+        "path": "0001-orbit-baseline-native-colors.patch",
+        "sha256": "e3773d9c97cb5bae2f17dbb133036dfdec9046c0533cf023eebbcdc67507b60d"
+      }
+    ],
+    "files": [
+      {
+        "path": "chrome/browser/ui/color/chrome_color_mixers.cc",
+        "mode": "100644",
+        "sha256": "cb956000a3deaabb0d357848a09b4d74fafcf710dd3ceb6c02b8efb441941672"
+      },
+      {
+        "path": "chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc",
+        "mode": "100644",
+        "sha256": "197f13ea0bccb913e3aaebfa2ef3cb3f5af59ab8e55b3f3d4dd4608d41969e09"
+      }
+    ]
   }
 }

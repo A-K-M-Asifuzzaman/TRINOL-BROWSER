@@ -1,0 +1,230 @@
+--- a/chrome/browser/ui/color/chrome_color_mixers.cc
++++ b/chrome/browser/ui/color/chrome_color_mixers.cc
+@@ -10,6 +10,7 @@
+ #include "base/containers/fixed_flat_map.h"
+ #include "base/functional/bind.h"
+ #include "base/no_destructor.h"
++#include "build/build_config.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/color/chrome_color_mixer.h"
+ #include "chrome/browser/ui/color/chrome_color_provider_utils.h"
+@@ -23,7 +24,11 @@
+ #include "chrome/browser/ui/color/omnibox_color_mixer.h"
+ #include "chrome/browser/ui/color/product_specifications_color_mixer.h"
+ #include "chrome/browser/ui/color/tab_strip_color_mixer.h"
++#include "ui/color/color_id.h"
++#include "ui/color/color_mixer.h"
++#include "ui/color/color_provider.h"
+ #include "ui/color/color_provider_utils.h"
++#include "ui/color/color_transform.h"
+ 
+ namespace {
+ 
+@@ -65,6 +70,87 @@
+ // .inc file serves to undefine the macros the first inclusion defined.
+ #include "ui/color/color_id_map_macros.inc"
+ 
++#if BUILDFLAG(IS_MAC)
++// Orbit owns only the uncustomized baseline shell. Incognito uses grayscale;
++// user/extension themes, app windows and accessibility palettes stay upstream.
++void AddTrinolOrbitColorMixer(ui::ColorProvider* provider,
++                             const ui::ColorProviderKey& key) {
++  if (key.custom_theme || key.app_controller || key.user_color.has_value() ||
++      key.user_color_source != ui::ColorProviderKey::UserColorSource::kBaseline ||
++      key.contrast_mode != ui::ColorProviderKey::ContrastMode::kNormal ||
++      key.forced_colors != ui::ColorProviderKey::ForcedColors::kNone ||
++      key.system_theme != ui::SystemTheme::kDefault ||
++      key.frame_type != ui::ColorProviderKey::FrameType::kChromium) {
++    return;
++  }
++
++  const bool dark = key.color_mode == ui::ColorProviderKey::ColorMode::kDark;
++  const SkColor frame = dark ? SkColorSetRGB(0x10, 0x13, 0x19)
++                            : SkColorSetRGB(0xe7, 0xec, 0xf3);
++  const SkColor inactive_frame = dark ? SkColorSetRGB(0x1c, 0x22, 0x2c)
++                                     : SkColorSetRGB(0xdf, 0xe5, 0xee);
++  const SkColor surface = dark ? SkColorSetRGB(0x19, 0x1e, 0x27)
++                              : SkColorSetRGB(0xf2, 0xf5, 0xfa);
++  const SkColor hover = dark ? SkColorSetRGB(0x24, 0x2b, 0x37)
++                            : SkColorSetRGB(0xe2, 0xe9, 0xf3);
++  const SkColor selected = dark ? SkColorSetRGB(0x23, 0x38, 0x54)
++                               : SkColorSetRGB(0xdc, 0xe8, 0xff);
++  const SkColor text = dark ? SkColorSetRGB(0xf4, 0xf6, 0xfa)
++                           : SkColorSetRGB(0x17, 0x22, 0x34);
++  const SkColor muted = dark ? SkColorSetRGB(0xa5, 0xb0, 0xc0)
++                            : SkColorSetRGB(0x52, 0x60, 0x78);
++  const SkColor accent = dark ? SkColorSetRGB(0x86, 0xb1, 0xff)
++                             : SkColorSetRGB(0x24, 0x5d, 0xc2);
++  const SkColor line = dark ? SkColorSetRGB(0x30, 0x3a, 0x49)
++                           : SkColorSetRGB(0xcb, 0xd4, 0xe1);
++
++  ui::ColorMixer& mixer = provider->AddMixer();
++  mixer[ui::kColorFrameActive] = {frame};
++  mixer[ui::kColorFrameInactive] = {inactive_frame};
++  mixer[kColorToolbar] = {surface};
++  mixer[kColorToolbarTextDefault] = {text};
++  mixer[kColorToolbarButtonText] = {text};
++  mixer[kColorToolbarButtonIconDefault] = {muted};
++  mixer[kColorToolbarButtonIconHovered] = {accent};
++  mixer[kColorToolbarButtonIconPressed] = {accent};
++  mixer[kColorToolbarButtonIconDisabled] =
++      ui::AlphaBlend(muted, surface, 0x61);
++  mixer[kColorToolbarButtonIconInactive] = {muted};
++  mixer[kColorToolbarButtonBorder] = {line};
++  mixer[kColorToolbarInkDropHover] = {hover};
++  mixer[kColorToolbarContentAreaSeparator] = {line};
++  mixer[kColorToolbarSeparatorDefault] = {line};
++  mixer[kColorToolbarTopSeparatorFrameActive] = {line};
++  mixer[kColorToolbarTopSeparatorFrameInactive] = {line};
++  // Keep the real omnibox text, suggestion, PageInfo and security color recipes.
++  mixer[kColorLocationBarBackground] = {frame};
++  mixer[kColorLocationBarBackgroundHovered] = {hover};
++  mixer[kColorLocationBarBorder] = {line};
++
++  mixer[kColorTabBackgroundActiveFrameActive] = {surface};
++  mixer[kColorTabBackgroundActiveFrameInactive] = {surface};
++  mixer[kColorTabBackgroundInactiveFrameActive] = {frame};
++  mixer[kColorTabBackgroundInactiveFrameInactive] = {inactive_frame};
++  mixer[kColorTabBackgroundInactiveHoverFrameActive] = {hover};
++  mixer[kColorTabBackgroundInactiveHoverFrameInactive] = {hover};
++  mixer[kColorTabBackgroundSelectedFrameActive] = {selected};
++  mixer[kColorTabBackgroundSelectedFrameInactive] = {hover};
++  mixer[kColorTabBackgroundSelectedHoverFrameActive] =
++      ui::AlphaBlend(accent, selected, 0x19);
++  mixer[kColorTabBackgroundSelectedHoverFrameInactive] = {selected};
++  mixer[kColorTabForegroundActiveFrameActive] = {accent};
++  mixer[kColorTabForegroundActiveFrameInactive] = {muted};
++  mixer[kColorTabForegroundInactiveFrameActive] = {muted};
++  mixer[kColorTabForegroundInactiveFrameInactive] = {muted};
++  mixer[kColorTabFocusRingActive] = {accent};
++  mixer[kColorTabFocusRingInactive] = {accent};
++  mixer[kColorTabCloseButtonFocusRingActive] = {accent};
++  mixer[kColorTabCloseButtonFocusRingInactive] = {accent};
++  mixer[kColorTabStrokeFrameActive] = {line};
++  mixer[kColorTabStrokeFrameInactive] = {line};
++}
++#endif  // BUILDFLAG(IS_MAC)
++
+ }  // namespace
+ 
+ void AddChromeColorMixers(ui::ColorProvider* provider,
+@@ -85,8 +171,12 @@
+   AddMaterialSidePanelColorMixer(provider, key);
+   AddMaterialTabStripColorMixer(provider, key);
+ 
+-  // Must be the last one in order to override other mixer colors.
++  // Apply platform colors before Orbit and explicit theme/app suppliers.
+   AddNativeChromeColorMixer(provider, key);
++
++#if BUILDFLAG(IS_MAC)
++  AddTrinolOrbitColorMixer(provider, key);
++#endif
+ 
+   if (key.custom_theme) {
+     key.custom_theme->AddColorMixers(provider, key);
+--- a/chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc
++++ b/chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc
+@@ -4,12 +4,18 @@
+ 
+ #include "chrome/browser/ui/color/material_tab_strip_color_mixer.h"
+ 
++#include <utility>
++
++#include "build/build_config.h"
++#include "chrome/browser/themes/custom_theme_supplier.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+ #include "chrome/browser/ui/color/chrome_color_mixers.h"
+ #include "testing/gtest/include/gtest/gtest.h"
+ #include "third_party/skia/include/core/SkColor.h"
++#include "ui/color/color_mixers.h"
+ #include "ui/color/color_provider.h"
+ #include "ui/color/color_provider_key.h"
++#include "ui/gfx/color_utils.h"
+ 
+ namespace {
+ 
+@@ -42,4 +48,84 @@
+       kExpectedAlpha);
+ }
+ 
++#if BUILDFLAG(IS_MAC)
++TEST(TrinolOrbitColorMixerTest, LightAndDarkBaselineShellContrast) {
++  for (bool dark : {false, true}) {
++    ui::ColorProvider provider;
++    ui::ColorProviderKey key;
++    key.color_mode = dark ? ui::ColorProviderKey::ColorMode::kDark
++                          : ui::ColorProviderKey::ColorMode::kLight;
++    key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    ui::AddColorMixers(&provider, key);
++    AddChromeColorMixers(&provider, key);
++    const SkColor surface = dark ? SkColorSetRGB(0x19, 0x1e, 0x27)
++                                 : SkColorSetRGB(0xf2, 0xf5, 0xfa);
++    EXPECT_EQ(surface, provider.GetColor(kColorToolbar));
++    EXPECT_EQ(surface, provider.GetColor(kColorTabBackgroundActiveFrameActive));
++    EXPECT_NE(provider.GetColor(kColorTabBackgroundInactiveFrameActive),
++              provider.GetColor(kColorTabBackgroundInactiveFrameInactive));
++    for (const auto pair : {
++             std::pair{kColorToolbarText, kColorToolbar},
++             std::pair{kColorTabForegroundActiveFrameActive,
++                       kColorTabBackgroundActiveFrameActive},
++             std::pair{kColorTabForegroundActiveFrameInactive,
++                       kColorTabBackgroundActiveFrameInactive},
++             std::pair{kColorTabForegroundInactiveFrameActive,
++                       kColorTabBackgroundInactiveFrameActive},
++             std::pair{kColorTabForegroundInactiveFrameInactive,
++                       kColorTabBackgroundInactiveFrameInactive}}) {
++      EXPECT_GE(color_utils::GetContrastRatio(provider.GetColor(pair.first),
++                                              provider.GetColor(pair.second)),
++                4.5f);
++    }
++    EXPECT_GE(color_utils::GetContrastRatio(
++                  provider.GetColor(kColorTabFocusRingActive), surface),
++              3.0f);
++    EXPECT_NE(provider.GetColor(kColorToolbarButtonIconDisabled),
++              provider.GetColor(kColorToolbarButtonIcon));
++  }
++}
++
++TEST(TrinolOrbitColorMixerTest, AccessibilityAndIncognitoKeepUpstreamPalette) {
++  for (int variant : {0, 1, 2}) {
++    ui::ColorProvider provider;
++    ui::ColorProviderKey key;
++    key.color_mode = ui::ColorProviderKey::ColorMode::kDark;
++    key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    if (variant == 0) {
++      key.contrast_mode = ui::ColorProviderKey::ContrastMode::kHigh;
++    } else if (variant == 1) {
++      key.forced_colors = ui::ColorProviderKey::ForcedColors::kSystem;
++    } else {
++      // ThemeService uses grayscale and dark mode for incognito.
++      key.user_color_source = ui::ColorProviderKey::UserColorSource::kGrayscale;
++    }
++    ui::AddColorMixers(&provider, key);
++    AddChromeColorMixers(&provider, key);
++    EXPECT_NE(SkColorSetRGB(0x19, 0x1e, 0x27),
++              provider.GetColor(kColorToolbar));
++  }
++}
++
++TEST(TrinolOrbitColorMixerTest, UserAndExtensionThemesKeepUpstreamPalette) {
++  for (bool extension : {false, true}) {
++    ui::ColorProvider provider;
++    ui::ColorProviderKey key;
++    key.color_mode = ui::ColorProviderKey::ColorMode::kDark;
++    key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    if (extension) {
++      key.custom_theme = base::WrapRefCounted(new CustomThemeSupplier(
++          ui::ColorProviderKey::ThemeInitializerSupplier::ThemeType::kExtension));
++    } else {
++      key.user_color = SkColorSetRGB(0xa0, 0x40, 0x20);
++      key.user_color_source = ui::ColorProviderKey::UserColorSource::kAccent;
++    }
++    ui::AddColorMixers(&provider, key);
++    AddChromeColorMixers(&provider, key);
++    EXPECT_NE(SkColorSetRGB(0x19, 0x1e, 0x27),
++              provider.GetColor(kColorToolbar));
++  }
++}
++#endif  // BUILDFLAG(IS_MAC)
++
+ }  // namespace
