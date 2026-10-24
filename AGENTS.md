@@ -47,6 +47,10 @@ review. Only `--reviewed-r6-ui-smoke --operator-present` can consume that recove
 preserve the R6 marker bytes in `TrinolLifecycle.r6-ui-reviewed.json` atomically.
 The archive blocks every later launch, including after a successful session.
 Never use app selection/activation as observation. No Phase 2B2 is authorized.
+The 2B1 session is now consumed: PID 20381 exited 0 with normal Quit, helper
+cleanup and valid continuity. The exact original R6 bytes are archived. Its UI
+trial exposed a frame eligibility error; the corrected palette compiled but has
+not been launched. Preserve the archive; no further native session is authorized.
 
 ## Quality and tests
 

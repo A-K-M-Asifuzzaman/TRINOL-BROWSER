@@ -2,7 +2,8 @@
 
 Trinol Browser is a planned native Chromium fork by TrinolIT: macOS arm64 first,
 then Windows and Linux. It will retain Chromium's browser services while adding
-TrinolIT branding and a distinct native interface. Native Trinol customization is not integrated yet.
+TrinolIT branding and a distinct native interface. Phase 2B1 introduces the first
+manifest-bound native toolbar/tab color slice; visual acceptance remains partial.
 
 **Phase 1C is partial; compilation and responsive browsing succeeded:** the
 preserved one-job build completed with exit 0. After a host restart, native
@@ -10,11 +11,18 @@ Chromium 155.0.8059.85 rendered HTML/CSS/JavaScript, HTTPS and internal pages.
 R6 captured native Quit acceptance, browser exit 0, owned helper cleanup and
 valid observation continuity, but an unexpected second instance invalidated the
 single-instance lifecycle. Operator cleanup removed all compiled-app processes.
-Repeatable clean shutdown remains unverified; the R6 failure marker blocks more
-launches. Source/tool pins and outputs remain preserved. Phase 2 awaits architect
-review for native work; see the [R6 report](docs/phase-1c-r6-observation-reliability.md).
+Repeatable clean shutdown remains unverified. Phase 2B1 separately authorized
+one UI trial, preserving the exact R6 marker in a one-use archive. That browsing
+trial exited 0 with helper cleanup and valid continuity. Further native launches
+require separate review. See the [R6 report](docs/phase-1c-r6-observation-reliability.md).
 
-**Phase 2A design foundation is available for review**, independently authorized
+**Phase 2B1 native slice is PARTIAL:** the first incremental build succeeded,
+and its one bounded native session exposed an incorrect macOS frame eligibility
+guard. The source correction compiled successfully; its regression case is tracked
+in the [native report](docs/phase-2b1-native-shell-report.md); corrected Orbit appearance
+has not been launched. No Phase 2B2 is authorized.
+
+**Phase 2A design foundation was approved**, independently authorized
 while Phase 1C remains partial. Run `python3 design/prototype/serve.py` and open
 [Trinol Orbit](http://127.0.0.1:4173/prototype/). The interactive preview includes
 horizontal/vertical tabs, a collapsible sidebar, omnibox suggestions, a command

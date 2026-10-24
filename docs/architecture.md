@@ -1,8 +1,10 @@
 # Trinol Browser architecture — Phase 0 decision
 
 Status: native implementation architecture; Phase 2A now has an independently
-authorized standalone design prototype. Native product customizations are not
-shipped. See [the UI contract](design/native-ui-integration-plan.md).
+authorized standalone design prototype. Phase 2B1 adds a native ColorProvider
+slice through reproducible patches; corrected visual acceptance remains pending.
+See [the UI contract](design/native-ui-integration-plan.md) and
+[native report](phase-2b1-native-shell-report.md).
 
 ## Product boundary
 
@@ -40,10 +42,14 @@ upstream/tool pins, through dependency sync, then ordered patches and explicit
 overlay mappings, into generated output outside the product repository.
 
 `upstream/manifest.json` records the verified source/tool pins, GN arguments and
-build/runtime evidence. An empty patch series and overlay list still declare no
-native customizations. Phase 2A assets and prototype remain outside that contract
-until design review. The standalone design simulator does not replace browser
-models or establish native integration acceptance.
+build/runtime evidence. The versioned customization contract now records the
+ordered patch SHA-256 digests and exact changed source paths, Git modes and final
+content hashes. Verification distinguishes pristine, exact applied customization
+and unauthorized changes; revision/dirty-tree protections remain enforced.
+Phase 2B1 adds baseline macOS color recipes, leaving TabStripModel, commands and
+window geometry upstream. ThemeService retains appearance/user-theme priority;
+incognito, high contrast and app windows are excluded. The standalone simulator
+does not replace native browser models or establish native acceptance.
 
 ## Trust and compatibility
 

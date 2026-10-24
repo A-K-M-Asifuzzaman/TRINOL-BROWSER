@@ -6,8 +6,9 @@
 | 1A — approved | Read-only storage inventory, preflight utility/tests, build preparation documentation | Verified candidate filesystem/backing capacity, tests and GitHub delivery; no downloads or storage changes |
 | 1B — approved | Approved storage path, exact verified source/tool pins, Chromium checkout and toolchain | Successful dependency sync, matching SHAs, SDK compatibility and checkout evidence |
 | 1C — partial; responsive browsing verified, bounded shutdown gate incomplete | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
-| 2A — UI foundation complete, awaiting design review | Independently authorized design system, runnable interactive prototype, screenshots and native integration contract | Prototype checks and captures; native checkout and R6 marker preserved |
-| 2B — proposed; separate approval required | Selected native branding/UI implementation | Reviewed patches/overlays, resource/build tests and safe launch gate |
+| 2A — approved UI foundation | Independently authorized design system, runnable interactive prototype, screenshots and native integration contract | Prototype checks and captures; native checkout and R6 marker preserved |
+| 2B1 — PARTIAL; native slice implemented, corrected visual validation pending | Native Orbit color integration and exact patched-tree verification | Initial incremental build and one bounded browsing lifecycle passed; frame eligibility correction needs visual review |
+| 2B2 — proposed; separate approval required | Next selected native slice | First validate corrected baseline colors with separate runtime authorization; review resources/layout before expanding |
 | 3 — proposed | Native UI redesign and trusted internal surfaces | Browser/WebUI, accessibility, keyboard and functional regression checks |
 | Later — proposed | Workspaces, split view, command palette, optional AI/sync | Separate designs, privacy/security tests and measured performance |
 | Distribution — gated | Supported releases across approved platforms | Signed packages/updates, rollback, license review, security response and release testing |
@@ -28,8 +29,9 @@ R5 failure marker was subsequently archived by R6. See the
 [R5 lifecycle report](phase-1c-r5-lifecycle-validation.md) for the event timeline,
 monitoring limits and next engineering action. No Chromium rebuild or source
 patch was performed. Repeatable valid bounded shutdown remains unverified.
-Native integration still requires new explicit instruction after architect review.
-No native product UI, AI integration, signing setup or distribution is implemented.
+These are historical Phase 1C findings; no shutdown-root-cause fix is claimed.
+Phase 2B1 now separately authorizes the first native color slice. AI integration,
+signing and distribution remain unimplemented.
 
 R6 improved the maximum observation gap to 2.423 seconds with acknowledged final
 evidence flush. Its owned browser exited 0, but GUI app selection apparently
@@ -44,4 +46,10 @@ PARTIAL. [Trinol Orbit](phase-2a-ui-report.md) supplies original tokens/assets,
 working simulated shell interactions, both appearances, 16 captures and a
 [source-grounded integration plan](design/native-ui-integration-plan.md). This
 does not retire the R6 marker or establish native shutdown/UI acceptance. The
-next native integration phase awaits design selection and separate approval.
+design was approved for the limited Phase 2B1 color slice. See the
+[native report](phase-2b1-native-shell-report.md). Its one operator-observed
+browsing session captured exit 0, normal Quit, complete helper cleanup and valid
+continuity, while exposing a macOS frame-guard error. The correction is kept in
+the ordered patch series. No second native launch is permitted. Phase 1C stays
+PARTIAL: repeated independent lifecycle evidence and the original GPU teardown
+uncertainty remain unresolved. Phase 2B2 is not authorized.

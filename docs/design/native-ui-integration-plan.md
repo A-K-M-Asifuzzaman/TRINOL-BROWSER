@@ -3,7 +3,9 @@
 Inspected locally against Chromium 155.0.8059.85 at
 `0e66b94549a8bd85f03fbdf189b752d6e7b63c32`, not against moving main.
 No native source change, GN generation, compile or app launch occurred in 2A.
-All implementation below is proposed for a later reviewed phase.
+The ownership plan below records the original 2A review; 2B1 has now implemented
+the baseline color seam. See the [native report](../phase-2b1-native-shell-report.md)
+for actual patches, build evidence, the frame-guard correction and runtime limits.
 
 ## Verified ownership and extension points
 
@@ -70,9 +72,11 @@ created by patches must be refused. There is no overwrite or force flag.
 An explicit --apply performs git apply --check followed by git apply for each
 patch in order, then copies overlays. Errors preserve work and list completed
 operations; there is no reset, cleanup or automatic rollback. No live checkout
-was passed to this script in 2A. The foundation validator intentionally still
-requires an empty customization contract. A future native phase must review its
-schema/validator change alongside its first concrete patch and overlay mapping.
+was passed to this script in 2A. The foundation validator intentionally
+required an empty customization contract in 2A. Phase 2B1 replaces that baseline
+restriction with strict versioned patch/output identity verification. A pristine
+checkout may be checked explicitly; applied mode must match every declared byte,
+mode and source path and reject all undeclared nonignored source files.
 
 ## Incremental implementation order and acceptance
 
@@ -106,7 +110,13 @@ schema/validator change alongside its first concrete patch and overlay mapping.
    fullscreen/window controls, WebUI CSP and UI performance. Native lifecycle
    launch remains blocked by R6 until a separately reviewed safety gate.
 
-Ready: design tokens, original vectors, shared visual components, prototype
-interaction evidence and a tested application contract. Not ready: native C++
-implementation, production WebUI bindings, branding packages or native runtime
-acceptance. Phase 1C remains PARTIAL throughout this independent design phase.
+Phase 2B1 status: native C++ baseline toolbar/tab color recipes and exact
+customization verification exist. The initial build passed and its single trial
+exposed an incorrect frame guard: BrowserNativeWidgetMac::UseCustomFrame returns
+false for ordinary browser windows, so BrowserWidget sets FrameType::kNative.
+The correction targets that key, while nonnative/PiP frames remain upstream.
+Native geometry, toolbar bindings and tab ownership remain unchanged.
+
+Corrected colors still require separately authorized native visual acceptance.
+Production WebUI, logo resource placement, sidebar/workspace/palette and packaging
+remain deferred. Phase 1C stays PARTIAL; no Phase 2B2 is authorized.

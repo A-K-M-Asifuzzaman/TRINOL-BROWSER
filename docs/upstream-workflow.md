@@ -246,4 +246,21 @@ dependent patches. Explicit --apply is for a future reviewed native phase; it
 never resets or overwrites existing overlay files. Overlay declarations require
 source, destination under trinol/ and SHA-256. Directory overlays, symlink/binary
 patches and rename/copy patches are unsupported. See the plan for exact limits.
-The foundation validator intentionally retains the empty baseline restriction.
+In 2A, the foundation validator retained the empty baseline restriction.
+
+## Phase 2B1 authorized customization verification
+
+The empty-series statements above describe the historical baseline and 2A. The
+current manifest declares exact ordered patches and authorized output hashes/modes.
+`verify_upstream_checkout.py --source-state pristine` explicitly checks an untouched
+pinned checkout; its default applied mode requires the complete declared state.
+Neither mode accepts arbitrary source modifications. New checkouts reproduce
+the full series with `apply_product_patches.py --checkout /path/to/src` (check),
+then the same command with `--apply`. Do not reapply a complete series over an
+existing customized tree or reset that tree.
+
+The 2B1 frame correction was appended after the first applied patch: the exact
+previous contract was verified, the complete new series was replayed in a scratch
+index, then only the checked new tail patch was applied. Final full-contract
+verification passed. This was an explicitly reviewed operation, not a relaxation
+of the applicator's clean-tree requirement. See the [native report](phase-2b1-native-shell-report.md).
