@@ -55,6 +55,8 @@ class ResourceTests(unittest.TestCase):
         for jobs in (1, 2, 4):
             self.assertEqual(b.parse_args(['--build-root', '/external', '--jobs', str(jobs)]).jobs, jobs)
         self.assertEqual(b.parse_args(['--build-root', '/external']).jobs, 4)
+        args = b.parse_args(['--build-root', '/external', '--jobs', '1', '--orbit-test-object'])
+        self.assertTrue(args.orbit_test_object)
 
     def test_stable_historical_swap_at_one_job(self):
         period = b.WarningPeriod(15*b.GIB)
@@ -259,6 +261,12 @@ class FilesystemTests(unittest.TestCase):
         self.assertEqual(command[command.index('-j')+1], '1')
         self.assertEqual(Path(command[0]).name, 'autoninja')
         for name, data in files.items(): self.assertEqual((output/name).read_bytes(), data)
+        args.orbit_test_object = True
+        with patch.object(b, 'inspect_args'), \
+             patch.object(b, 'guarded', return_value={'state':'finished', 'exit_code':0}) as guard:
+            self.assertEqual(b.run_build(args, self.root, paths, SimpleNamespace(), Mock(), 42), 0)
+        self.assertEqual(guard.call_args.args[0][-1], b.ORBIT_TEST_OBJECT)
+        for name, data in files.items(): self.assertEqual((output/name).read_bytes(), data)
 
     def test_guard_does_not_launch_under_critical_pressure(self):
         volume = SimpleNamespace(mount=str(self.root))
@@ -326,6 +334,8 @@ class NativeGateTests(unittest.TestCase):
         with self.assertRaises(ValueError):b.verify_build_gate(args,{'customization':True},volume,probe)
         args.generate=False;probe.disk.return_value={'VolumeUUID':'wrong'}
         with self.assertRaises(ValueError):b.verify_build_gate(args,{},volume,probe)
+        args.orbit_test_object=True;args.generate=True
+        with self.assertRaisesRegex(ValueError,'Orbit test object'):b.verify_build_gate(args,{},volume,probe)
 
 
 if __name__ == '__main__':

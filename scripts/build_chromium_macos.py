@@ -17,6 +17,7 @@ from check_chromium_build_storage import GIB, InspectionError, MacProbe, capacit
 from verify_upstream_checkout import ROOT, verify
 
 EXPECTED_VOLUME_UUID = '47F505A1-126A-4EC6-8DB6-135813AA6111'
+ORBIT_TEST_OBJECT = 'obj/chrome/browser/ui/color/unit_tests/material_tab_strip_color_mixer_unittest.o'
 
 EXPECTED = {'target_os': '"mac"', 'target_cpu': '"arm64"', 'is_debug': 'false',
             'is_component_build': 'true', 'symbol_level': '1',
@@ -254,6 +255,8 @@ def parse_args(argv=None):
     parser.add_argument('--build-root', required=True, type=Path)
     parser.add_argument('--generate', action='store_true', help='Generate and inspect GN files; do not compile')
     parser.add_argument('--jobs', choices=(1, 2, 4), type=int, default=4)
+    parser.add_argument('--orbit-test-object', action='store_true',
+                        help='Compile only the existing Orbit color test translation unit/dependencies')
     return parser.parse_args(argv)
 
 
@@ -277,7 +280,8 @@ def run_build(args, root, paths, volume, probe, lock_fd):
             raise ValueError('GN generation must succeed before compilation')
         inspect_args(root, run)
         result = guarded([str(paths['depot_tools'] / 'autoninja'), '-C', 'out/TrinolDev',
-                          '-j', str(args.jobs), '-cache_dir=' + str(paths['siso-cache']), 'chrome'],
+                          '-j', str(args.jobs), '-cache_dir=' + str(paths['siso-cache']),
+                          ORBIT_TEST_OBJECT if args.orbit_test_object else 'chrome'],
                          root, run, volume, probe, args.jobs, False, lock_fd)
     if result['state'] != 'finished' or result.get('exit_code') != 0:
         return 75 if result.get('outcome') == 'controlled_stop' else 1
@@ -286,6 +290,8 @@ def run_build(args, root, paths, volume, probe, lock_fd):
 
 
 def verify_build_gate(args, manifest, volume, probe):
+    if getattr(args, 'orbit_test_object', False) and (args.generate or args.jobs != 1):
+        raise ValueError('Orbit test object requires preserved GN output and one job')
     if probe.disk(volume.device).get('VolumeUUID') != EXPECTED_VOLUME_UUID:
         raise ValueError('Unexpected external APFS UUID')
     if manifest.get('customization') and (args.generate or args.jobs != 1):
