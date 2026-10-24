@@ -1,6 +1,8 @@
 # Trinol Browser architecture — Phase 0 decision
 
-Status: proposed implementation architecture. Nothing here is a shipped feature.
+Status: native implementation architecture; Phase 2A now has an independently
+authorized standalone design prototype. Native product customizations are not
+shipped. See [the UI contract](design/native-ui-integration-plan.md).
 
 ## Product boundary
 
@@ -37,10 +39,11 @@ holds Chromium and its DEPS dependencies. Reproduction flows from exact recorded
 upstream/tool pins, through dependency sync, then ordered patches and explicit
 overlay mappings, into generated output outside the product repository.
 
-`upstream/manifest.json` is the future reproducibility record. Its revisions are
-intentionally null in Phase 0. An empty patch series and overlay list declare no
-customizations. A build is not reproducible until real pins, resolved GN arguments,
-platform/toolchain details and a verified build record are committed.
+`upstream/manifest.json` records the verified source/tool pins, GN arguments and
+build/runtime evidence. An empty patch series and overlay list still declare no
+native customizations. Phase 2A assets and prototype remain outside that contract
+until design review. The standalone design simulator does not replace browser
+models or establish native integration acceptance.
 
 ## Trust and compatibility
 

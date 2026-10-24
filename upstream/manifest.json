@@ -101,7 +101,7 @@
       "strict_signature_valid": false
     },
     "final_available_external_bytes": 256197001216,
-    "resume_requirement": "R5 retry consumed: actual browser exit 0 and helper cleanup, but 36.95-second startup observation gap failed acceptance. Preserve R4 archive and active R5 marker; review monitor/evidence-write latency before any separately authorized retry. No rebuild or Phase 2.",
+    "resume_requirement": "Native launch remains blocked by the consumed R6 trial and active R6 failure marker; preserve R4/R5 archives. Phase 2A independently authorizes the design prototype and source planning only, with no native launch, patch application or rebuild.",
     "recovery": {
       "phase": "1c-r",
       "status": "runtime_blocked",
@@ -415,5 +415,25 @@
       "repeatable_bounded_shutdown_verified": false,
       "phase_2_authorized": false
     }
+  },
+  "design": {
+    "phase": "2a",
+    "status": "foundation_complete_awaiting_design_review",
+    "date": "2026-10-25",
+    "direction": "Trinol Orbit",
+    "report": "docs/phase-2a-ui-report.md",
+    "prototype": "design/prototype/",
+    "integration_plan": "docs/design/native-ui-integration-plan.md",
+    "screenshots": "design/review/",
+    "screenshot_count": 16,
+    "python_tests": 195,
+    "model_tests": 4,
+    "browser_checks": 29,
+    "native_ui_integrated": false,
+    "native_source_modified": false,
+    "native_build_run": false,
+    "native_browser_launched": false,
+    "r6_failure_marker_preserved": true,
+    "next_phase_authorized": false
   }
 }

@@ -32,6 +32,13 @@ Before a separately reviewed retry, establish GUI observation that cannot launch
 an app; do not use macOS cua.getApp as a read-only binding during a trial. Keep
 unexpected processes separate from owned helpers and request operator cleanup.
 
+Phase 2A is explicitly authorized independently of the partial Phase 1C gate.
+It covers the standalone design/prototype, original assets/tokens, visual and
+interaction tests, source-grounded native planning and safe patch infrastructure.
+It does not authorize applying patches to Chromium, native launch, clearing the
+R6 marker, rebuilding, or proceeding to the next native integration phase.
+Visual tests use a separate disposable testing browser, never the compiled app.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns

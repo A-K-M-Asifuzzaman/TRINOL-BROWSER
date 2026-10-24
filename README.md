@@ -2,7 +2,7 @@
 
 Trinol Browser is a planned native Chromium fork by TrinolIT: macOS arm64 first,
 then Windows and Linux. It will retain Chromium's browser services while adding
-TrinolIT branding and a distinct native interface. No Trinol customization is implemented yet.
+TrinolIT branding and a distinct native interface. Native Trinol customization is not integrated yet.
 
 **Phase 1C is partial; compilation and responsive browsing succeeded:** the
 preserved one-job build completed with exit 0. After a host restart, native
@@ -12,7 +12,16 @@ valid observation continuity, but an unexpected second instance invalidated the
 single-instance lifecycle. Operator cleanup removed all compiled-app processes.
 Repeatable clean shutdown remains unverified; the R6 failure marker blocks more
 launches. Source/tool pins and outputs remain preserved. Phase 2 awaits architect
-review; see the [R6 report](docs/phase-1c-r6-observation-reliability.md).
+review for native work; see the [R6 report](docs/phase-1c-r6-observation-reliability.md).
+
+**Phase 2A design foundation is available for review**, independently authorized
+while Phase 1C remains partial. Run `python3 design/prototype/serve.py` and open
+[Trinol Orbit](http://127.0.0.1:4173/prototype/). The interactive preview includes
+horizontal/vertical tabs, a collapsible sidebar, omnibox suggestions, a command
+palette and complete light/dark appearances. All navigation/data is simulated.
+See the [UI report](docs/phase-2a-ui-report.md),
+[preview instructions](design/prototype/README.md) and
+[actual review captures](design/review/README.md).
 
 This repository contains Trinol-owned changes, documentation, configuration
 examples and validation. The Chromium checkout, depot_tools and build outputs
