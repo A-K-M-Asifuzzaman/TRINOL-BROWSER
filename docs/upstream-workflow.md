@@ -102,7 +102,8 @@ prove every dependency is unchanged and does not rerun downloads or hooks.
 ## Applying Trinol customizations
 
 Through Phase 1B there are none: patches/series contains only comments and overlays is
-empty. For future versions, implement an applicator with these rules:
+empty. Phase 2A adds the tested `scripts/apply_product_patches.py` infrastructure with
+these rules (no application to the actual checkout is authorized in 2A):
 
 - Verify the upstream HEAD equals the manifest SHA and the working tree is clean.
 - Resolve each series entry strictly beneath patches/; reject path traversal and
@@ -114,8 +115,8 @@ empty. For future versions, implement an applicator with these rules:
   containment, collisions and expected existing content. See
   [overlay rules](../overlays/README.md). Never silently overwrite local work.
 - Capture the final source diff and manifest, and ensure GN integration patches
-  explicitly include Trinol modules/resources. Do not claim an applicator exists
-  until it is implemented and tested with failure/reapplication cases.
+  explicitly include Trinol modules/resources. The applicator is now covered by synthetic dependent-patch, failure and
+  reapplication tests.
 
 For Phase 1's initial baseline, keep both customization lists empty and prove the
 unmodified build before adding product changes.
@@ -235,3 +236,14 @@ This is unbenchmarked guidance: monitor memory pressure/swap and disk headroom.
 Level 1 trades some debugging detail for lower resource use. Verify each argument
 against the pinned revision and record effective GN args. Do not use official
 release flags or reduce sandbox protection to achieve a successful launch.
+
+## Phase 2A design-only integration contract
+
+The [native UI plan](design/native-ui-integration-plan.md) maps Orbit to the
+pinned Views/WebUI source. Patches and overlays remain empty. The new applicator
+defaults to check-only using temporary Git index/object storage and supports
+dependent patches. Explicit --apply is for a future reviewed native phase; it
+never resets or overwrites existing overlay files. Overlay declarations require
+source, destination under trinol/ and SHA-256. Directory overlays, symlink/binary
+patches and rename/copy patches are unsupported. See the plan for exact limits.
+The foundation validator intentionally retains the empty baseline restriction.
