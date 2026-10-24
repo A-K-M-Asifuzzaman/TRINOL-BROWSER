@@ -19,7 +19,7 @@ import subprocess
 import tempfile
 import time
 
-from build_chromium_macos import assert_mount, build_lock, contained, memory
+from build_chromium_macos import EXPECTED_VOLUME_UUID, assert_mount, build_lock, contained, memory
 from check_chromium_build_storage import GIB, InspectionError, MacProbe, capacity
 from verify_upstream_checkout import ROOT, verify
 from runtime_evidence import EvidenceWriter, Latency
@@ -73,8 +73,8 @@ def inspect_storage(root, expected_uuid, probe):
     return volume
 
 
-def isolated_profile(root):
-    profile = Path(tempfile.mkdtemp(prefix='test-profile-r6-', dir=root))
+def isolated_profile(root, prefix='test-profile-r6-'):
+    profile = Path(tempfile.mkdtemp(prefix=prefix, dir=root))
     contained(root, profile.relative_to(root))
     crash = profile / 'Crashpad-isolated'
     crash.mkdir(mode=0o700)
@@ -447,6 +447,60 @@ def review_r5_marker(root, latch, rows):
                 authorization='Phase 1C-R6 section 12, one reviewed recovery')
 
 
+R6_MARKER_SHA256 = 'ccc213f095ea07c8dc20fa086a00d87ce4297645a29a5b82bafbd6debdea5655'
+
+
+def review_r6_ui_marker(root, latch, rows, manifest):
+    """Phase 2B1's one UI session; only the exact reviewed R6 isolation failure."""
+    if rows or hashlib.sha256(latch.read_bytes()).hexdigest() != R6_MARKER_SHA256:
+        raise ValueError('R6 marker changed or previous processes remain')
+    archive = contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json')
+    if archive.exists():
+        raise ValueError('Phase 2B1 UI session already consumed')
+    marker = json.loads(latch.read_text())
+    evidence = contained(root, Path(marker['evidence']).relative_to(root))
+    records = {name: json.loads(contained(root, (evidence / name).relative_to(root)).read_text())
+               for name in ('result.json', 'launch.json', 'final-health.json')}
+    result, launch, health = (records[name] for name in
+                             ('result.json', 'launch.json', 'final-health.json'))
+    writer = result['evidence_writer']
+    if (result != marker['result'] or result['failure'] != 'unexpected_compiled_app_process'
+            or result['clean_shutdown'] != 'FAIL' or result['exit_code'] != 0
+            or not result['quit_requested'] or result['remaining'] or result['watchdog']
+            or result['dumps'] or result['persistent_uninterruptible']
+            or result['max_observation_gap'] > 15 or result['max_poll_gap'] > 15
+            or result['pid'] != launch['pid'] or result['profile'] != launch['profile']
+            or health['remaining'] or health['volume_uuid'] != manifest['native_ui']['volume_uuid']
+            or health['operator_report'] != 'Normal GUI Quit; window closed'
+            or writer['error'] or not writer['flushed'] or writer['dropped']
+            or writer['unacknowledged'] or writer['submitted'] != writer['acknowledged']
+            or writer['writer_remaining']):
+        raise ValueError('R6 isolation failure/cleanup evidence is inconsistent')
+    for name, digest in [('r4', R4_MARKER_SHA256), ('r5', R5_MARKER_SHA256)]:
+        old = contained(root, 'logs/TrinolLifecycle.' + name + '-reviewed.json')
+        if hashlib.sha256(old.read_bytes()).hexdigest() != digest:
+            raise ValueError('Earlier reviewed marker archive changed')
+    ui = manifest['native_ui']
+    build = ui['incremental_build']
+    if (ui['customization_id'] != manifest['customization']['id'] or
+            build['source_files'] != manifest['customization']['files'] or
+            build['patches'] != manifest['customization']['patches']):
+        raise ValueError('Native UI build does not match current customization')
+    status = json.loads(contained(root, build['evidence_directory'] + '/status.json').read_text())
+    artifact = contained(root, 'chromium/src/out/TrinolDev/libchrome_dll.dylib')
+    if (status['exit_code'] != 0 or status['outcome'] != 'completed' or status['jobs'] != 1
+            or status['progress']['failed_steps'] or status['progress']['remaining_steps']
+            or hashlib.sha256(artifact.read_bytes()).hexdigest() != build['library_sha256']):
+        raise ValueError('Successful native UI build/artifact verification failed')
+    hashes = {name: hashlib.sha256(contained(root, (evidence / name).relative_to(root)).read_bytes()).hexdigest()
+              for name in ('result.json', 'launch.json', 'final-health.json',
+                           'events.jsonl', 'samples.jsonl', 'browser.log')}
+    return dict(archive=str(archive), marker_sha256=R6_MARKER_SHA256,
+                previous_evidence=str(evidence), evidence_sha256=hashes,
+                library_sha256=build['library_sha256'],
+                authorization='Phase 2B1 section 9, one operator-observed native UI session')
+
+
 def runtime_guard(root, volume, expected_uuid, baseline, probe, timing):
     device = root.stat().st_dev
     def guard():
@@ -490,6 +544,10 @@ def main():
                         help='Consume only the exact failure reviewed by Phase 1C-R5')
     parser.add_argument('--reviewed-r5-retry', action='store_true',
                         help='Consume only the exact R5 failure reviewed by Phase 1C-R6')
+    parser.add_argument('--reviewed-r6-ui-smoke', action='store_true',
+                        help='Phase 2B1 only: one exact R6 recovery after native compilation')
+    parser.add_argument('--operator-present', action='store_true',
+                        help='Fresh operator confirmation: present, unlocked, direct GUI observation/cleanup')
     parser.add_argument('--workload', choices=('blank', 'browsing'), default='blank')
     args = parser.parse_args()
     if not 10 <= args.seconds <= 600 or not 10 <= args.grace_seconds <= 60:
@@ -511,9 +569,17 @@ def main():
         # Share the build runner's lock: an authorized build cannot overlap.
         with build_lock(root):
             rows = snapshot(app)
+            if contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json').exists():
+                raise ValueError('Phase 2B1 session consumed; separate review required for any new launch')
             if args.reviewed_r4_retry:
                 raise ValueError('R4 recovery is retired; never reuse it for R6')
+            if args.reviewed_r6_ui_smoke and (args.reviewed_r5_retry or not args.operator_present):
+                raise ValueError('UI smoke requires fresh operator presence and its own recovery')
             retry = review_r5_marker(root, latch, rows) if args.reviewed_r5_retry else None
+            if args.reviewed_r6_ui_smoke:
+                if args.volume_uuid != EXPECTED_VOLUME_UUID or args.volume_uuid != manifest['native_ui']['volume_uuid']:
+                    raise ValueError('UI smoke requires the reviewed APFS UUID')
+                retry = review_r6_ui_marker(root, latch, rows, manifest)
             if latch.exists() and not retry:
                 raise ValueError('Prior lifecycle failure requires review: ' + str(latch))
             if rows:
@@ -525,8 +591,13 @@ def main():
             baseline = memory(probe)
             if baseline['pressure'] != 1:
                 raise ValueError('Normal idle memory pressure required')
-            run = Path(tempfile.mkdtemp(prefix='phase1cr6-lifecycle-', dir=logs))
-            profile, crash = isolated_profile(root)
+            internal = os.statvfs('/')
+            if internal.f_bavail * internal.f_frsize <= 10 * GIB:
+                raise ValueError('Insufficient internal swap headroom')
+            run = Path(tempfile.mkdtemp(prefix='phase2b1-ui-' if args.reviewed_r6_ui_smoke
+                                       else 'phase1cr6-lifecycle-', dir=logs))
+            profile, crash = isolated_profile(root, 'test-profile-2b1-' if args.reviewed_r6_ui_smoke
+                                             else 'test-profile-r6-')
             device = root.stat().st_dev
 
             TIMING = Latency()
@@ -536,10 +607,10 @@ def main():
                     '--no-default-browser-check', 'about:blank']
             if args.workload == 'browsing':
                 fixture = run / 'rendering.html'
-                fixture.write_text('<!doctype html><title>R6 loading</title><style>h1{color:green}</style><h1>R6 local HTML</h1>'
+                fixture.write_text('<!doctype html><title>Lifecycle loading</title><style>h1{color:green}</style><h1>Local HTML</h1>'
                     '<p id="result">Pending JavaScript</p><script>'
                     'document.querySelector("#result").textContent="PASS: JavaScript DOM updated";'
-                    'document.title="R6 JavaScript PASS";</script>')
+                    'document.title="Lifecycle JavaScript PASS";</script>')
                 argv[-1:] = [fixture.as_uri(), 'https://example.com/']
             interrupted = []
             for sig in (signal.SIGINT, signal.SIGTERM):
@@ -563,6 +634,7 @@ def main():
                         start_time_unix=time.time(), seconds=args.seconds,
                         grace_seconds=args.grace_seconds, baseline_memory=baseline,
                         volume_uuid=args.volume_uuid, reviewed_retry=retry,
+                        operator_present=args.operator_present,
                         workload=args.workload)):
                     launch_failure = writer.error
                 result = supervise(process, profile, run, args.seconds, args.grace_seconds,

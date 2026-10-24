@@ -438,12 +438,14 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(Path(retry['archive']).read_bytes(), raw)
         with self.assertRaises(ValueError): life.review_r4_marker(self.root, latch, [])
 
-    def run_main(self, rows=(), latch=False, outcome='PASS'):
+    def run_main(self, rows=(), latch=False, outcome='PASS', extra_args=(), ui_consumed=False):
         from contextlib import ExitStack
         (self.root / 'logs').mkdir()
         marker = self.root / 'logs/TrinolLifecycle.blocked.json'
         if latch:
             marker.write_text('{}')
+        if ui_consumed:
+            (self.root / 'logs/TrinolLifecycle.r6-ui-reviewed.json').write_text('{}')
         volume = SimpleNamespace(device='disk7s2', mount=str(self.root))
         probe = Mock(disk=Mock(return_value={'VolumeUUID': 'expected'}))
         result = dict(exit_code=0, quit_requested=True,
@@ -464,7 +466,7 @@ class LifecycleTests(unittest.TestCase):
             stack.enter_context(patch.object(life.signal, 'signal'))
             stack.enter_context(patch('builtins.print'))
             stack.enter_context(patch.object(sys, 'argv', ['lifecycle', '--build-root',
-                                     str(self.root), '--volume-uuid', 'expected']))
+                                     str(self.root), '--volume-uuid', 'expected', *extra_args]))
             popen = stack.enter_context(patch.object(life.subprocess, 'Popen',
                                                     return_value=Mock(pid=123)))
             code = life.main()
@@ -488,6 +490,90 @@ class LifecycleTests(unittest.TestCase):
 
     def test_main_existing_browser_refuses_launch(self):
         code, _, calls = self.run_main(rows=[self.row()])
+        self.assertEqual((code, calls), (2, 0))
+
+    def r6_fixture(self):
+        import hashlib
+        latch, evidence, old = self.marker_fixture()
+        (self.root / 'logs/TrinolLifecycle.r4-reviewed.json').write_bytes(old)
+        (self.root / 'logs/TrinolLifecycle.r5-reviewed.json').write_bytes(b'{}')
+        self.enterContext(patch.object(life, 'R5_MARKER_SHA256', hashlib.sha256(b'{}').hexdigest()))
+        result = dict(pid=123, profile=str(self.profile), clean_shutdown='FAIL', exit_code=0,
+                      failure='unexpected_compiled_app_process', quit_requested=True,
+                      remaining=[], watchdog=False, dumps=[], persistent_uninterruptible=False,
+                      max_observation_gap=2.5, max_poll_gap=0.5,
+                      evidence_writer=dict(error=None, flushed=True, dropped=0, unacknowledged=0,
+                                           submitted=78, acknowledged=78, writer_remaining=False))
+        (evidence / 'result.json').write_text(json.dumps(result))
+        (evidence / 'launch.json').write_text(json.dumps(dict(pid=123, profile=str(self.profile))))
+        (evidence / 'final-health.json').write_text(json.dumps(dict(remaining=[], volume_uuid='expected',
+                                               operator_report='Normal GUI Quit; window closed')))
+        (evidence / 'events.jsonl').touch()
+        raw = json.dumps(dict(evidence=str(evidence), result=result)).encode()
+        latch.write_bytes(raw)
+        self.enterContext(patch.object(life, 'R6_MARKER_SHA256', hashlib.sha256(raw).hexdigest()))
+        build = self.root / 'logs/build'; build.mkdir()
+        (build / 'status.json').write_text(json.dumps(dict(exit_code=0, outcome='completed', jobs=1,
+                                             progress=dict(failed_steps=0, remaining_steps=0))))
+        library = self.root / 'chromium/src/out/TrinolDev/libchrome_dll.dylib'
+        library.parent.mkdir(parents=True); library.write_bytes(b'compiled library')
+        manifest = dict(customization=dict(id='orbit', files=['expected files'], patches=['patch']),
+                        native_ui=dict(customization_id='orbit', volume_uuid='expected',
+                            incremental_build=dict(source_files=['expected files'], patches=['patch'],
+                                evidence_directory='logs/build',
+                                library_sha256=hashlib.sha256(library.read_bytes()).hexdigest())))
+        return latch, evidence, raw, manifest
+
+    def test_r6_ui_recovery_preserves_exact_marker_and_is_one_use(self):
+        latch, _, raw, manifest = self.r6_fixture()
+        retry = life.review_r6_ui_marker(self.root, latch, [], manifest)
+        run = self.root / 'run'; run.mkdir()
+        life.arm_latch(latch, run, retry)
+        self.assertEqual(Path(retry['archive']).read_bytes(), raw)
+        latch.write_bytes(raw)  # Even restoring old bytes cannot authorize a second session.
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+
+    def test_r6_ui_rejects_other_markers_or_remaining_processes(self):
+        latch, _, _, manifest = self.r6_fixture()
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [self.row()], manifest)
+        latch.write_text('{}')
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+
+    def test_r6_ui_rejects_changed_cleanup_evidence_and_archives(self):
+        latch, evidence, _, manifest = self.r6_fixture()
+        health = evidence / 'final-health.json'; original = health.read_bytes()
+        health.write_text(json.dumps(dict(remaining=[self.row()], volume_uuid='expected')))
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+        health.write_bytes(original)
+        (self.root / 'logs/TrinolLifecycle.r4-reviewed.json').write_text('changed')
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+
+    def test_r6_ui_requires_matching_successful_build_and_library(self):
+        latch, _, _, manifest = self.r6_fixture()
+        build = manifest['native_ui']['incremental_build']
+        build['source_files'] = ['different']
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+        build['source_files'] = ['expected files']
+        status = self.root / 'logs/build/status.json'; original = status.read_bytes()
+        status.write_text(json.dumps(dict(exit_code=1)))
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+        status.write_bytes(original)
+        (self.root / 'chromium/src/out/TrinolDev/libchrome_dll.dylib').write_bytes(b'changed')
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+
+    def test_r6_ui_rejects_evidence_symlink(self):
+        latch, evidence, _, manifest = self.r6_fixture()
+        (evidence / 'events.jsonl').unlink()
+        (evidence / 'events.jsonl').symlink_to('/etc/hosts')
+        with self.assertRaises(ValueError): life.review_r6_ui_marker(self.root, latch, [], manifest)
+
+    def test_ui_smoke_without_fresh_operator_never_launches(self):
+        code, marker, calls = self.run_main(latch=True, extra_args=['--reviewed-r6-ui-smoke'])
+        self.assertEqual((code, calls), (2, 0))
+        self.assertTrue(marker.exists())
+
+    def test_consumed_ui_session_blocks_default_launch_even_without_active_marker(self):
+        code, _, calls = self.run_main(ui_consumed=True)
         self.assertEqual((code, calls), (2, 0))
 
 

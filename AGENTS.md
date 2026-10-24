@@ -39,6 +39,15 @@ It does not authorize applying patches to Chromium, native launch, clearing the
 R6 marker, rebuilding, or proceeding to the next native integration phase.
 Visual tests use a separate disposable testing browser, never the compiled app.
 
+Phase 2B1 explicitly authorizes the first native Orbit baseline color patch,
+exact manifest-bound source verification and a guarded one-job incremental build.
+It also permits ONE operator-observed native UI session after successful build,
+normal memory/storage, fresh present/unlocked confirmation and exact R6 evidence
+review. Only `--reviewed-r6-ui-smoke --operator-present` can consume that recovery;
+preserve the R6 marker bytes in `TrinolLifecycle.r6-ui-reviewed.json` atomically.
+The archive blocks every later launch, including after a successful session.
+Never use app selection/activation as observation. No Phase 2B2 is authorized.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns
