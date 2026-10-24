@@ -16,6 +16,8 @@ jobs:
         run: python3 scripts/validate_foundation.py
       - name: Test repository tooling without downloads
         run: python3 -m unittest discover -s tests -v
+      - name: Test dependency-free prototype model
+        run: node --test design/prototype/model.test.js
       - name: Check Python syntax
         run: python3 -m compileall -q scripts tests
       - name: Check audit script syntax
