@@ -1,0 +1,64 @@
+--- a/chrome/browser/ui/color/chrome_color_mixers.cc
++++ b/chrome/browser/ui/color/chrome_color_mixers.cc
+@@ -74,6 +74,7 @@
+ #if BUILDFLAG(IS_MAC)
+ // Orbit owns only the uncustomized baseline shell. Incognito uses grayscale;
+ // user/extension themes, app windows and accessibility palettes stay upstream.
++// BrowserNativeWidgetMac uses native frames for ordinary browser windows.
+ void AddTrinolOrbitColorMixer(ui::ColorProvider* provider,
+                              const ui::ColorProviderKey& key) {
+   if (key.custom_theme || key.app_controller || key.user_color.has_value() ||
+@@ -81,7 +82,7 @@
+       key.contrast_mode != ui::ColorProviderKey::ContrastMode::kNormal ||
+       key.forced_colors != ui::ColorProviderKey::ForcedColors::kNone ||
+       key.system_theme != ui::SystemTheme::kDefault ||
+-      key.frame_type != ui::ColorProviderKey::FrameType::kChromium) {
++      key.frame_type != ui::ColorProviderKey::FrameType::kNative) {
+     return;
+   }
+ 
+--- a/chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc
++++ b/chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc
+@@ -56,6 +56,7 @@
+     key.color_mode = dark ? ui::ColorProviderKey::ColorMode::kDark
+                           : ui::ColorProviderKey::ColorMode::kLight;
+     key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    key.frame_type = ui::ColorProviderKey::FrameType::kNative;
+     ui::AddColorMixers(&provider, key);
+     AddChromeColorMixers(&provider, key);
+     const SkColor surface = dark ? SkColorSetRGB(0x19, 0x1e, 0x27)
+@@ -92,6 +93,7 @@
+     ui::ColorProviderKey key;
+     key.color_mode = ui::ColorProviderKey::ColorMode::kDark;
+     key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    key.frame_type = ui::ColorProviderKey::FrameType::kNative;
+     if (variant == 0) {
+       key.contrast_mode = ui::ColorProviderKey::ContrastMode::kHigh;
+     } else if (variant == 1) {
+@@ -113,6 +115,7 @@
+     ui::ColorProviderKey key;
+     key.color_mode = ui::ColorProviderKey::ColorMode::kDark;
+     key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++    key.frame_type = ui::ColorProviderKey::FrameType::kNative;
+     if (extension) {
+       key.custom_theme = base::WrapRefCounted(new CustomThemeSupplier(
+           ui::ColorProviderKey::ThemeInitializerSupplier::ThemeType::kExtension));
+@@ -126,6 +129,18 @@
+               provider.GetColor(kColorToolbar));
+   }
+ }
++
++TEST(TrinolOrbitColorMixerTest, NonNativeFramesKeepUpstreamPalette) {
++  ui::ColorProvider provider;
++  ui::ColorProviderKey key;
++  key.color_mode = ui::ColorProviderKey::ColorMode::kDark;
++  key.user_color_source = ui::ColorProviderKey::UserColorSource::kBaseline;
++  key.frame_type = ui::ColorProviderKey::FrameType::kChromium;
++  ui::AddColorMixers(&provider, key);
++  AddChromeColorMixers(&provider, key);
++  EXPECT_NE(SkColorSetRGB(0x19, 0x1e, 0x27),
++            provider.GetColor(kColorToolbar));
++}
+ #endif  // BUILDFLAG(IS_MAC)
+ 
+ }  // namespace

@@ -101,7 +101,7 @@
       "strict_signature_valid": false
     },
     "final_available_external_bytes": 256197001216,
-    "resume_requirement": "Native launch remains blocked by the consumed R6 trial and active R6 failure marker; preserve R4/R5 archives. Phase 2A independently authorizes the design prototype and source planning only, with no native launch, patch application or rebuild.",
+    "resume_requirement": "Phase 2B1 consumed its single reviewed native UI trial: exit 0 with bounded continuity and helper cleanup. Exact original R6 bytes are archived and block further native launches. Corrected native-frame palette compiled successfully but has not been launched. Phase 1C remains partial; require separate architect-reviewed runtime authorization.",
     "recovery": {
       "phase": "1c-r",
       "status": "runtime_blocked",
@@ -444,28 +444,68 @@
       {
         "path": "0001-orbit-baseline-native-colors.patch",
         "sha256": "4ed73a62d513c4fd82ab640c042f1e22297f7891c3eb688ee4766dec6139b581"
+      },
+      {
+        "path": "0002-orbit-macos-native-frame.patch",
+        "sha256": "eccf9ae094230b21dd96915f399433ac4640d06a9a965f76ad4f7420be207b66"
       }
     ],
     "files": [
       {
         "path": "chrome/browser/ui/color/chrome_color_mixers.cc",
         "mode": "100644",
-        "sha256": "707dbc9509fe73b70804aae01d977de77a84a6971216b760fa9c38671b2727be"
+        "sha256": "c42a816fed39f17bcdefe32f3adeac6dec6897d4bfe26b8e4e4884661e5c190f"
       },
       {
         "path": "chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc",
         "mode": "100644",
-        "sha256": "197f13ea0bccb913e3aaebfa2ef3cb3f5af59ab8e55b3f3d4dd4608d41969e09"
+        "sha256": "8eae6b0e9d90695eabb255433c926c121acf71125b802160a7f4698cc1fb3609"
       }
     ]
   },
   "native_ui": {
     "phase": "2b1",
-    "status": "compiled_pending_native_ui_gate",
+    "status": "partial_corrected_compiled_visual_unverified",
     "report": "docs/phase-2b1-native-shell-report.md",
     "customization_id": "orbit-native-shell-v1",
     "volume_uuid": "47F505A1-126A-4EC6-8DB6-135813AA6111",
     "incremental_build": {
+      "evidence_directory": "logs/phase1c-build-96ke21d5",
+      "exit_code": 0,
+      "completed_actions": 2,
+      "failed_actions": 0,
+      "jobs": 1,
+      "gn_regenerated": false,
+      "library_sha256": "f4f64292a78c8758c2be665177dfc39103432105ecc4deacd9dfc4baec619afe",
+      "launcher_sha256": "62fa3b0be1ef7404d53911c5b28777da7ce441483b00b6271f4a4da494501fae",
+      "source_files": [
+        {
+          "path": "chrome/browser/ui/color/chrome_color_mixers.cc",
+          "mode": "100644",
+          "sha256": "c42a816fed39f17bcdefe32f3adeac6dec6897d4bfe26b8e4e4884661e5c190f"
+        },
+        {
+          "path": "chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc",
+          "mode": "100644",
+          "sha256": "8eae6b0e9d90695eabb255433c926c121acf71125b802160a7f4698cc1fb3609"
+        }
+      ],
+      "patches": [
+        {
+          "path": "0001-orbit-baseline-native-colors.patch",
+          "sha256": "4ed73a62d513c4fd82ab640c042f1e22297f7891c3eb688ee4766dec6139b581"
+        },
+        {
+          "path": "0002-orbit-macos-native-frame.patch",
+          "sha256": "eccf9ae094230b21dd96915f399433ac4640d06a9a965f76ad4f7420be207b66"
+        }
+      ]
+    },
+    "native_browser_launched": true,
+    "native_visual_tests": "Initial palette FAIL; corrected native appearance NOT TESTED",
+    "phase_1c_status": "partial",
+    "phase_2b2_authorized": false,
+    "initial_incremental_build": {
       "evidence_directory": "logs/phase1c-build-fbw04y0p",
       "exit_code": 0,
       "completed_actions": 2,
@@ -493,9 +533,38 @@
         }
       ]
     },
-    "native_browser_launched": false,
-    "native_visual_tests": "NOT TESTED",
-    "phase_1c_status": "partial",
-    "phase_2b2_authorized": false
+    "native_cpp_tests": {
+      "added": 4,
+      "run": false,
+      "deferred_actions": 266,
+      "deferred_cxx_actions": 144
+    },
+    "runtime": {
+      "evidence_directory": "logs/phase2b1-ui-end3_z48",
+      "new_browser_launches": 1,
+      "pid": 20381,
+      "seconds": 240,
+      "grace_seconds": 30,
+      "browser_exit_code": 0,
+      "supervisor_exit_code": 0,
+      "clean_shutdown": "PASS",
+      "watchdog": false,
+      "dumps_created": 0,
+      "remaining_processes": 0,
+      "max_poll_gap_seconds": 0.3769002500339411,
+      "max_observation_gap_seconds": 2.295531707990449,
+      "evidence_writes_submitted": 266,
+      "evidence_writes_acknowledged": 266,
+      "evidence_flushed": true,
+      "tested_library_sha256": "6c9a937b9881d6a20070115a6ba4d0e99f48e21716970667cb4218789fc4c3ef",
+      "corrected_library_launched": false,
+      "reviewed_r6_archive": "logs/TrinolLifecycle.r6-ui-reviewed.json",
+      "reviewed_r6_marker_sha256": "ccc213f095ea07c8dc20fa086a00d87ce4297645a29a5b82bafbd6debdea5655",
+      "recovery_consumed": true,
+      "further_launches_authorized": false
+    },
+    "reviewed_native_screenshots": "design/review/native-2b1/",
+    "python_tests": 210,
+    "prototype_model_tests": 4
   }
 }

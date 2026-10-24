@@ -1,2 +1,3 @@
 # Ordered patches against the pinned Chromium source.
 0001-orbit-baseline-native-colors.patch
+0002-orbit-macos-native-frame.patch
