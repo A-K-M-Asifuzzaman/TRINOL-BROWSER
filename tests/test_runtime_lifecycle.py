@@ -438,7 +438,7 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(Path(retry['archive']).read_bytes(), raw)
         with self.assertRaises(ValueError): life.review_r4_marker(self.root, latch, [])
 
-    def run_main(self, rows=(), latch=False, outcome='PASS', extra_args=(), ui_consumed=False):
+    def run_main(self, rows=(), latch=False, outcome='PASS', extra_args=(), ui_consumed=False, visual_consumed=False):
         from contextlib import ExitStack
         (self.root / 'logs').mkdir()
         marker = self.root / 'logs/TrinolLifecycle.blocked.json'
@@ -446,6 +446,8 @@ class LifecycleTests(unittest.TestCase):
             marker.write_text('{}')
         if ui_consumed:
             (self.root / 'logs/TrinolLifecycle.r6-ui-reviewed.json').write_text('{}')
+        if visual_consumed:
+            (self.root / 'logs/TrinolLifecycle.phase2b1v-authorization.json').write_text('{}')
         volume = SimpleNamespace(device='disk7s2', mount=str(self.root))
         probe = Mock(disk=Mock(return_value={'VolumeUUID': 'expected'}))
         result = dict(exit_code=0, quit_requested=True,
@@ -575,6 +577,32 @@ class LifecycleTests(unittest.TestCase):
     def test_consumed_ui_session_blocks_default_launch_even_without_active_marker(self):
         code, _, calls = self.run_main(ui_consumed=True)
         self.assertEqual((code, calls), (2, 0))
+
+    def test_consumed_visual_authorization_blocks_every_default_launch(self):
+        code, _, calls = self.run_main(visual_consumed=True)
+        self.assertEqual((code, calls), (2, 0))
+
+    def test_visual_mode_requires_fresh_present_unlocked_operator(self):
+        code, _, calls = self.run_main(extra_args=['--phase-2b1v-visual'])
+        self.assertEqual((code, calls), (2, 0))
+
+    def test_old_retry_flag_cannot_override_new_visual_authorization(self):
+        import phase2b1v_runtime as visual
+        with patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'), patch.object(visual, 'review') as review:
+            code, _, calls = self.run_main(ui_consumed=True, extra_args=['--phase-2b1v-visual',
+                '--operator-present', '--window-observer', '/fixture', '--reviewed-r6-ui-smoke'])
+        self.assertEqual((code, calls), (2, 0))
+        review.assert_not_called()
+
+    def test_clean_exit_does_not_clear_pending_visual_guard(self):
+        import phase2b1v_runtime as visual
+        with patch.object(visual, 'review', return_value={'phase':'fixture'}), \
+             patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'):
+            code, marker, calls = self.run_main(extra_args=['--phase-2b1v-visual',
+                '--operator-present', '--window-observer', '/fixture'])
+        self.assertEqual((code, calls), (0, 1))
+        self.assertEqual(json.loads(marker.read_text())['visual_validation'], 'PENDING_REVIEW')
+        self.assertTrue((self.root/visual.CLAIM).exists())
 
 
 if __name__ == '__main__':

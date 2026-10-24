@@ -548,6 +548,10 @@ def main():
                         help='Phase 2B1 only: one exact R6 recovery after native compilation')
     parser.add_argument('--operator-present', action='store_true',
                         help='Fresh operator confirmation: present, unlocked, direct GUI observation/cleanup')
+    parser.add_argument('--phase-2b1v-visual', action='store_true',
+                        help='ONE exact corrected-palette trial authorized by Phase 2B1-V')
+    parser.add_argument('--window-observer', type=Path,
+                        help='Exact previously tested nonlaunching WindowServer utility under build root')
     parser.add_argument('--workload', choices=('blank', 'browsing'), default='blank')
     args = parser.parse_args()
     if not 10 <= args.seconds <= 600 or not 10 <= args.grace_seconds <= 60:
@@ -568,9 +572,19 @@ def main():
         latch = contained(root, 'logs/TrinolLifecycle.blocked.json')
         # Share the build runner's lock: an authorized build cannot overlap.
         with build_lock(root):
+            import phase2b1v_runtime as visual
             rows = snapshot(app)
-            if contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json').exists():
+            if contained(root, visual.CLAIM).exists():
+                raise ValueError('Phase 2B1-V authorization consumed; no additional launch')
+            if contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json').exists() and not args.phase_2b1v_visual:
                 raise ValueError('Phase 2B1 session consumed; separate review required for any new launch')
+            authorization = None
+            if args.phase_2b1v_visual:
+                if (not args.operator_present or not args.window_observer or
+                        args.volume_uuid != EXPECTED_VOLUME_UUID or
+                        args.reviewed_r4_retry or args.reviewed_r5_retry or args.reviewed_r6_ui_smoke):
+                    raise ValueError('2B1-V requires fresh present/unlocked operator, exact observer/UUID and its own authorization')
+                authorization = visual.review(root, rows, manifest, args.window_observer.absolute())
             if args.reviewed_r4_retry:
                 raise ValueError('R4 recovery is retired; never reuse it for R6')
             if args.reviewed_r6_ui_smoke and (args.reviewed_r5_retry or not args.operator_present):
@@ -594,9 +608,11 @@ def main():
             internal = os.statvfs('/')
             if internal.f_bavail * internal.f_frsize <= 10 * GIB:
                 raise ValueError('Insufficient internal swap headroom')
-            run = Path(tempfile.mkdtemp(prefix='phase2b1-ui-' if args.reviewed_r6_ui_smoke
+            run = Path(tempfile.mkdtemp(prefix='phase2b1v-visual-' if args.phase_2b1v_visual else
+                                       'phase2b1-ui-' if args.reviewed_r6_ui_smoke
                                        else 'phase1cr6-lifecycle-', dir=logs))
-            profile, crash = isolated_profile(root, 'test-profile-2b1-' if args.reviewed_r6_ui_smoke
+            profile, crash = isolated_profile(root, 'test-profile-2b1v-' if args.phase_2b1v_visual else
+                                             'test-profile-2b1-' if args.reviewed_r6_ui_smoke
                                              else 'test-profile-r6-')
             device = root.stat().st_dev
 
@@ -618,6 +634,8 @@ def main():
             guard()
             # A crash of this supervisor must also block the next launch.
             writer = EvidenceWriter(root, run, device, TIMING)
+            if authorization:
+                visual.claim(root, run, authorization)
             arm_latch(latch, run, retry)
             print('Evidence: ' + str(run), flush=True)
             with (run / 'browser.log').open('x') as log:
@@ -635,6 +653,7 @@ def main():
                         grace_seconds=args.grace_seconds, baseline_memory=baseline,
                         volume_uuid=args.volume_uuid, reviewed_retry=retry,
                         operator_present=args.operator_present,
+                        visual_authorization=authorization,
                         workload=args.workload)):
                     launch_failure = writer.error
                 result = supervise(process, profile, run, args.seconds, args.grace_seconds,
@@ -665,11 +684,15 @@ def main():
             result['clean_shutdown'] = classify(result['exit_code'], result['quit_requested'],
                 result['failure'], result['watchdog'], result['remaining'])
             result['gui_and_functional_tests'] = 'NOT TESTED'
+            if authorization:
+                result['visual_validation'] = 'PENDING_REVIEW'
             result['profile'] = str(profile)
             if result.get('cleanup_required'):
                 result['operator_action'] = 'Immediate supervised native GUI cleanup required; no new launch'
             (run / 'result.json').write_text(json.dumps(result, indent=2) + '\n')
-            if result['clean_shutdown'] != 'PASS':
+            if authorization:
+                visual.retain_visual_guard(latch, run, result)
+            elif result['clean_shutdown'] != 'PASS':
                 latch.write_text(json.dumps(dict(evidence=str(run), result=result), indent=2) + '\n')
             else:
                 latch.unlink()
