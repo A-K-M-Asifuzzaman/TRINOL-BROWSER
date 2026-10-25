@@ -25,3 +25,8 @@ The separately requested FINAL trial was also blocked by the fresh response
 “Not available; leave authorization unconsumed.” No prelaunch checks, native
 launch or capture followed. **BLOCKED — OPERATOR UNAVAILABLE — AUTHORIZATION
 UNCONSUMED.** This directory still contains no corrected native screenshot.
+
+On 2026-10-26 the operator was present, but preflight memory pressure 2 failed
+the required normal level 1. No native launch or capture followed; the one-use
+authorization remains unconsumed. Corrected dark/light and interaction captures
+still do not exist. See the current validation report for exact preflight evidence.

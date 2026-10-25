@@ -339,3 +339,12 @@ was “Not available; leave authorization unconsumed.” No native trial or prel
 checks followed; no claim/profile/capture was created by this attempt. All new
 visual, functional and lifecycle results remain NOT TESTED. Prior compilation
 and runtime evidence above remain historical. See the [FINAL checkpoint](phase-2b1-v-native-visual-validation.md#final-request--operator-gate-stopped-the-trial).
+
+## Present-operator 2B1-V preflight — 2026-10-26
+
+Fresh operator presence passed. Exact source/tool/customization/artifact and
+historical evidence checks passed, with no compiled-app/build process. Memory
+pressure was 2 rather than required normal 1, so preflight stopped without a
+launch, claim or profile. Authorization remains unconsumed; corrected native
+visual/function/lifecycle checks remain NOT TESTED. See the [current preflight
+record](phase-2b1-v-native-visual-validation.md#present-operator-attempt--memory-gate-stopped-prelaunch).

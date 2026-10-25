@@ -67,3 +67,9 @@ The separately requested 2B1-V FINAL trial also stopped at the fresh operator ga
 — AUTHORIZATION UNCONSUMED.** No prelaunch checks or native execution followed.
 The same one-use trial remains pending fresh confirmation and full preflight;
 no corrected visual acceptance or Phase 2B2 readiness is established.
+
+On 2026-10-26, fresh operator presence and exact artifact/evidence/storage/process
+checks passed, but pressure 2 failed the required normal-memory gate (1). No
+launch or authorization consumption followed. The corrected visual trial remains
+blocked pending normal memory, fresh availability and full preflight; Phase 2B1
+remains PARTIAL and Phase 2B2 remains unauthorized.

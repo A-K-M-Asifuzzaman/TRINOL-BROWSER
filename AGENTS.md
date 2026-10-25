@@ -62,9 +62,11 @@ Under the shared lock, exclusively create the permanent
 Never delete the claim or reuse any older retry flag. Retain the final active
 guard for visual review even after lifecycle PASS; a later run requires a new
 reviewed authorization. No Phase 2B2 or additional UI feature is authorized.
-The operator is currently unavailable and explicitly requested runtime remain
-untested. Do not launch or consume 2B1-V authorization without fresh present/
-unlocked operator confirmation. The native test object compiled; four C++ tests
+The latest 2026-10-26 preflight had fresh operator presence but stopped at memory
+pressure 2 (normal 1 required). No launch, profile or claim was created; the
+2B1-V authorization remains unconsumed. A later attempt requires fresh present/
+unlocked operator confirmation and all prelaunch gates; never bypass or retry
+a failed gate automatically. The native test object compiled; four C++ tests
 remain unexecuted.
 
 ## Quality and tests

@@ -1,10 +1,45 @@
 # Phase 2B1-V — corrected native palette validation
 
-Date: 2026-10-25, Asia/Dhaka. Verdict: **PARTIAL**. Offline gates and native test
-translation-unit compilation passed. Native visual/lifecycle validation is
-**BLOCKED: operator unavailable**; the operator directed that runtime stay
-untested. Zero new browser launches, no new profile, no authorization consumed.
-No Phase 2B2 is authorized.
+Updated: 2026-10-26, Asia/Dhaka. Verdict: **PARTIAL**; current native trial
+**BLOCKED: normal idle memory pressure required**. Fresh operator presence passed,
+but preflight reported pressure 2 rather than required 1. Zero corrected-library
+browser launches, no new profile and no authorization consumed. No Phase 2B2.
+Historical offline and operator-unavailable checkpoints remain below.
+
+## Present-operator attempt — memory gate stopped prelaunch
+
+On 2026-10-26 the operator explicitly confirmed physical presence at the unlocked
+Mac, native-window observation/interaction and availability throughout the test.
+Product main and origin/main matched `072f367ef8502602970f647a01c42f2c5401de2f`
+after fetch, with zero divergence. Authenticated owner A-K-M-Asifuzzaman and the
+existing author Asif Zman <138548302+asif4762@users.noreply.github.com> were verified.
+
+Private evidence: `logs/phase2b1v-final-preflight-b4cs_7o8/preflight.json` under
+`/Volumes/ssd(mac)2/TrinolBuild`. Native Darwin arm64, external writable APFS UUID
+`47F505A1-126A-4EC6-8DB6-135813AA6111`, physical backing capacity, external free
+267,054,903,296 bytes and internal free 70,300,844,032 bytes passed. The shared
+build/runtime lock was acquired. Exact source/tool pins, DEPS, complete declared
+two-patch source bytes/modes/inventory and arm64 bundle/executable identity passed.
+The existing authorization review validated corrected-library, launcher and GN
+hashes; all prior 2B1 evidence and R4/R5/R6 archives; absent claim/active guard;
+and the exact recorded read-only observer digest and invalid-PID self-check.
+No compiled-app or compiler/build process was found.
+
+**BLOCKED — NORMAL IDLE MEMORY PRESSURE REQUIRED — AUTHORIZATION UNCONSUMED.**
+Memory pressure was **2**, required **1**; swap was 3,780,242,309 bytes. The attempt
+stopped at that failed gate. No retry, launch, profile, Crashpad directory, claim,
+active guard, capture, rebuild or marker reset followed. This preflight record is
+not a runtime result. Historical source/build evidence remains intact.
+
+Native window identity/mapped library, dark/light palette, tabs/toolbar/focus,
+geometry, browsing/security, new exit status, helper cleanup, watchdog and dumps
+are all **NOT TESTED**. There is no new PID or exit code. C++ translation-unit
+compilation remains historical PASS; four native C++ executions remain NOT RUN.
+For this checkpoint, 235 Python tests and four Node model tests passed, as did
+foundation, Python/shell syntax and whitespace checks. These are offline checks.
+The next action is to reduce unrelated workload, then obtain fresh operator
+availability and rerun all required checks before consuming the same single
+trial. No automatic retry or Phase 2B2 is authorized by this blocked result.
 
 ## FINAL request — operator gate stopped the trial
 
