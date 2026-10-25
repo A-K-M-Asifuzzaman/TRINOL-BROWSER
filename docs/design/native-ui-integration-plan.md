@@ -131,3 +131,13 @@ synthetic regression coverage. Runtime was not attempted because the operator
 was unavailable and explicitly requested it remain untested. No corrected
 native palette, key state, theme/accessibility or functional acceptance is
 claimed. See the [checkpoint report](../phase-2b1-v-native-visual-validation.md).
+
+## Consumed 2B1-V native trial
+
+The corrected library was later mapped in PID 88337 during one bounded trial.
+Dark/light surfaces were observed; exact internal color-key/frame eligibility
+and controlled focus/hover/security coverage remain incomplete. Native frame
+glass compositing is a source-grounded possibility, not a confirmed runtime
+explanation. Normal Quit/exit 0 and complete cleanup passed for this trial.
+Authorization is consumed and the guard retained; no additional launch, source
+patch, build or Phase 2B2 is authorized. See the current validation report.

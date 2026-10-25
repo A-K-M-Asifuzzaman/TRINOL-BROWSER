@@ -502,7 +502,7 @@
       ]
     },
     "native_browser_launched": true,
-    "native_visual_tests": "Initial palette FAIL; corrected native appearance NOT TESTED",
+    "native_visual_tests": "Initial palette FAIL; corrected dark/light surfaces observed in 2B1-V; full controlled frame/state acceptance PARTIAL",
     "phase_1c_status": "partial",
     "phase_2b2_authorized": false,
     "initial_incremental_build": {
@@ -565,17 +565,18 @@
     },
     "reviewed_native_screenshots": "design/review/native-2b1/",
     "python_tests": 210,
-    "prototype_model_tests": 4
+    "prototype_model_tests": 4,
+    "corrected_visual_validation_report": "docs/phase-2b1-v-native-visual-validation.md"
   },
   "native_ui_validation": {
     "phase": "2b1-v",
-    "status": "partial_runtime_blocked_memory_pressure",
-    "reviewed_product_revision": "78406695aff1ad397aedf42a1e5fef28213ef095",
+    "status": "partial_native_palette_observed_lifecycle_pass",
+    "reviewed_product_revision": "d8bda1d8b60de3f18722b842dc1f69e0b49955a0",
     "report": "docs/phase-2b1-v-native-visual-validation.md",
     "expected_library_sha256": "f4f64292a78c8758c2be665177dfc39103432105ecc4deacd9dfc4baec619afe",
     "prior_trial_evidence": "logs/phase2b1-ui-end3_z48",
     "audit_evidence": "logs/phase2b1v-audit-2qxmjhtz",
-    "new_browser_launches": 0,
+    "new_browser_launches": 1,
     "cpp_tests": {
       "translation_unit_compiled": true,
       "object_build_evidence": "logs/phase1c-build-xlyu76od",
@@ -590,20 +591,21 @@
     },
     "phase_2b2_authorized": false,
     "operator_available": true,
-    "authorization_consumed": false,
-    "native_visual_result": "NOT TESTED",
-    "browser_exit_code": null,
+    "authorization_consumed": true,
+    "native_visual_result": "PARTIAL",
+    "browser_exit_code": 0,
     "python_tests": 235,
     "node_model_tests": 4,
     "review_directory": "design/review/native-2b1-validated/",
-    "native_screenshot_count": 0,
+    "native_screenshot_count": 5,
     "final_health": {
-      "pressure": 1,
-      "swap_bytes": 4333890437,
-      "external_available_bytes": 267026010112,
+      "pressure": 2,
+      "swap_bytes": 3771853701,
+      "internal_available_bytes": 70364876800,
+      "external_available_bytes": 266440171520,
       "compiled_process_count": 0,
-      "new_profile_count": 0,
-      "authorization_claim_exists": false
+      "authorization_claim_exists": true,
+      "active_review_guard_exists": true
     },
     "final_trial_checkpoint": {
       "date": "2026-10-25",
@@ -643,6 +645,73 @@
       "native_visual_result": "NOT TESTED",
       "browser_exit_code": null,
       "phase_2b2_authorized": false
+    },
+    "offline_reviewed_product_revision": "78406695aff1ad397aedf42a1e5fef28213ef095",
+    "offline_final_health": {
+      "pressure": 1,
+      "swap_bytes": 4333890437,
+      "external_available_bytes": 267026010112,
+      "compiled_process_count": 0,
+      "new_profile_count": 0,
+      "authorization_claim_exists": false
+    },
+    "public_native_screenshot_count": 1,
+    "runtime": {
+      "evidence_directory": "logs/phase2b1v-visual-xg70p26t",
+      "pid": 88337,
+      "seconds": 540,
+      "grace_seconds": 30,
+      "browser_exit_code": 0,
+      "supervisor_exit_code": 0,
+      "clean_shutdown": "PASS",
+      "watchdog": false,
+      "dumps_created": 0,
+      "remaining_processes": 0,
+      "unexpected_remaining_processes": 0,
+      "quit_requested_seconds": 540.0914039579802,
+      "quit_accepted_seconds": 540.2429323749966,
+      "browser_exited_seconds": 540.7532024160028,
+      "helpers_exited_seconds": 541.2554969579796,
+      "max_poll_gap_seconds": 0.41004633298143744,
+      "max_observation_gap_seconds": 2.360681249992922,
+      "evidence_writes_submitted": 520,
+      "evidence_writes_acknowledged": 520,
+      "evidence_flushed": true,
+      "transient_uninterruptible_observed": true,
+      "persistent_uninterruptible": false,
+      "pretrial_pressure_samples": [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1
+      ],
+      "runtime_pressure_values": [
+        1,
+        2
+      ],
+      "swap_growth_bytes": 0,
+      "tested_library_sha256": "f4f64292a78c8758c2be665177dfc39103432105ecc4deacd9dfc4baec619afe",
+      "permanent_claim_retained": true,
+      "active_review_guard_retained": true,
+      "raw_guard_visual_validation": "PENDING_REVIEW",
+      "separate_visual_review": "PARTIAL",
+      "further_launches_authorized": false,
+      "memory_diagnostics_evidence": "logs/phase2b1v-visual-xg70p26t/pretrial-memory-diagnostics.jsonl"
+    },
+    "observations": {
+      "responsive_startup": "PASS",
+      "local_html_css_javascript": "PASS",
+      "dark_surfaces": "PASS observed",
+      "light_toolbar_omnibox": "PASS observed",
+      "internal_color_key_and_exact_frame": "NOT TESTED",
+      "tab_creation_switching_settings": "PASS observed",
+      "focus_hover_selection": "NOT TESTED",
+      "controlled_https_navigation_reload_back_forward": "Operator reported success; NOT independently verified",
+      "site_security_pageinfo": "NOT TESTED",
+      "traffic_lights_at_one_size": "PASS observed",
+      "narrow_resize_incognito_custom_theme_high_contrast": "NOT TESTED"
     }
   }
 }

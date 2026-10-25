@@ -5,6 +5,11 @@ exposed a frame eligibility error. A source-confirmed correction follows below,
 but corrected visual acceptance requires separate review. Phase 1C remains
 PARTIAL. Phase 2B2 is not authorized.
 
+Current 2B1-V follow-up: corrected dark/light surfaces were observed in one
+540-second supervised session with normal Quit/real exit 0 and helper cleanup.
+Full controlled frame/state acceptance remains PARTIAL; the one-use authorization
+is consumed. See the [current review](phase-2b1-v-native-visual-validation.md).
+
 ## Verified baseline and implementation
 
 Approved design baseline: `0aa0b4ca4b161d254cea67e159d955de669daf37`.
@@ -348,3 +353,17 @@ pressure was 2 rather than required normal 1, so preflight stopped without a
 launch, claim or profile. Authorization remains unconsumed; corrected native
 visual/function/lifecycle checks remain NOT TESTED. See the [current preflight
 record](phase-2b1-v-native-visual-validation.md#present-operator-attempt--memory-gate-stopped-prelaunch).
+
+## Consumed corrected-library trial — 2026-10-26
+
+After six normal-pressure samples and fresh operator confirmation, the existing
+one-use supervisor launched PID 88337 with the corrected library mapped. Five
+identity-bound native captures show corrected dark/light surfaces; only the safe
+initial local fixture image is public. Capture coordination did not retain the
+requested focus/HTTPS/hover states, and frame compositing remains uncertain.
+Visual acceptance stays PARTIAL. Normal Quit at 540 s produced actual exit 0,
+complete helper cleanup, no extra browser/watchdog/dump and valid continuity.
+All 520 writes were acknowledged and flushed. Runtime/final pressure reached 2
+with unchanged swap. The claim and review guard remain; no further launch or
+Phase 2B2 is authorized. Four native C++ cases remain NOT RUN. Historical results
+above are unchanged; see the [current review](phase-2b1-v-native-visual-validation.md).

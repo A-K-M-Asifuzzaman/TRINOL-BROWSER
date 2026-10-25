@@ -1,0 +1,277 @@
+{
+  "phase": "2b1-v",
+  "verdict": "PARTIAL",
+  "evidence_directory": "logs/phase2b1v-visual-xg70p26t",
+  "product_revision": "d8bda1d8b60de3f18722b842dc1f69e0b49955a0",
+  "chromium_version": "155.0.8059.85",
+  "library_sha256": "f4f64292a78c8758c2be665177dfc39103432105ecc4deacd9dfc4baec619afe",
+  "pid": 88337,
+  "process_start": "Mon Oct 26 01:31:37 2026",
+  "executable_relative_to_build_root": "chromium/src/out/TrinolDev/Chromium.app/Contents/MacOS/Chromium",
+  "profile_path_sha256": "bcc31dba4f44128e10c597ae063b1e6a163d37d412f37138c870fd5357dbcb60",
+  "observer_sha256": "3f328dc3cfb4ad60109ce8c2d68a62c66ba6470763da2b5e2a99c4511a819b29",
+  "window_id": 35203,
+  "window_bounds": {
+    "Height": 777,
+    "Width": 1036,
+    "X": 1534,
+    "Y": -1473
+  },
+  "captures": [
+    {
+      "path": "dark-local-fixture.png",
+      "original_private_capture": "native-initial.png",
+      "sha256": "13957d4d461bf26a2571f886f61e14d88e15a2cc1788ecfc9b6890c31a7a805a",
+      "pixels": [
+        1148,
+        889
+      ],
+      "actual_state": "Dark native baseline shell with local HTML/CSS/JavaScript fixture, two tabs; no focus/hover/selection claim"
+    }
+  ],
+  "private_capture_count": 5,
+  "public_capture_count": 1,
+  "private_visual_review_sha256": "b285e24a000383dd6524598e365ec4eea2d4979c092a9fe9bea870301506fca9",
+  "color_analysis": [
+    {
+      "private_capture": "native-initial.png",
+      "sha256": "13957d4d461bf26a2571f886f61e14d88e15a2cc1788ecfc9b6890c31a7a805a",
+      "icc_description": "P27FBB-RG",
+      "regions": {
+        "frame": {
+          "rectangle_pixels": [
+            700,
+            42,
+            800,
+            75
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                19,
+                21,
+                25
+              ],
+              3300
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                18,
+                21,
+                27
+              ],
+              3300
+            ]
+          ]
+        },
+        "toolbar": {
+          "rectangle_pixels": [
+            350,
+            119,
+            650,
+            122
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                24,
+                28,
+                34
+              ],
+              900
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                25,
+                30,
+                38
+              ],
+              900
+            ]
+          ]
+        },
+        "active_tab": {
+          "rectangle_pixels": [
+            250,
+            65,
+            375,
+            76
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                24,
+                28,
+                34
+              ],
+              1373
+            ],
+            [
+              [
+                36,
+                44,
+                59
+              ],
+              1
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                25,
+                30,
+                38
+              ],
+              1373
+            ],
+            [
+              [
+                40,
+                50,
+                69
+              ],
+              1
+            ]
+          ]
+        }
+      }
+    },
+    {
+      "private_capture": "light-local-fixture.png",
+      "sha256": "cb05e830e0db45219d0d848c244756f1ea56018dafdd662e7f7a9295b8e6b4ed",
+      "icc_description": "P27FBB-RG",
+      "regions": {
+        "toolbar": {
+          "rectangle_pixels": [
+            350,
+            107,
+            650,
+            110
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                240,
+                243,
+                249
+              ],
+              900
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                242,
+                245,
+                250
+              ],
+              900
+            ]
+          ]
+        },
+        "omnibox": {
+          "rectangle_pixels": [
+            350,
+            85,
+            650,
+            95
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                227,
+                233,
+                241
+              ],
+              2791
+            ],
+            [
+              [
+                29,
+                29,
+                29
+              ],
+              35
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                231,
+                236,
+                243
+              ],
+              2791
+            ],
+            [
+              [
+                32,
+                32,
+                32
+              ],
+              35
+            ]
+          ]
+        },
+        "composited_titlebar": {
+          "rectangle_pixels": [
+            850,
+            28,
+            950,
+            60
+          ],
+          "raw_rgb_counts": [
+            [
+              [
+                198,
+                201,
+                207
+              ],
+              3138
+            ],
+            [
+              [
+                72,
+                85,
+                107
+              ],
+              7
+            ]
+          ],
+          "icc_to_srgb_analysis_counts": [
+            [
+              [
+                205,
+                208,
+                213
+              ],
+              3138
+            ],
+            [
+              [
+                82,
+                96,
+                120
+              ],
+              7
+            ]
+          ]
+        }
+      }
+    }
+  ],
+  "limitations": [
+    "Pixels are display-managed/composited output, not an inspection of internal ColorProviderKey or exact ColorIds.",
+    "Pinned macOS code may composite frame tint at partial opacity; the runtime glass eligibility was not inspected.",
+    "Four native C++ tests remain NOT RUN.",
+    "Historical R3 shutdown cause remains unresolved."
+  ],
+  "browser_exit_code": 0,
+  "clean_shutdown": "PASS",
+  "max_poll_gap_seconds": 0.41004633298143744,
+  "max_observation_gap_seconds": 2.360681249992922
+}

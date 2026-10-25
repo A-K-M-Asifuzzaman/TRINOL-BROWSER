@@ -7,7 +7,7 @@
 | 1B — approved | Approved storage path, exact verified source/tool pins, Chromium checkout and toolchain | Successful dependency sync, matching SHAs, SDK compatibility and checkout evidence |
 | 1C — partial; responsive browsing verified, bounded shutdown gate incomplete | Unmodified native macOS arm64 compilation and launch | Successful build, dedicated-profile launch and baseline checks with exact commands/results |
 | 2A — approved UI foundation | Independently authorized design system, runnable interactive prototype, screenshots and native integration contract | Prototype checks and captures; native checkout and R6 marker preserved |
-| 2B1 — PARTIAL; corrected visual validation blocked by operator availability | Native Orbit colors and exact patched-tree verification | Corrected artifact verified; C++ test object compiled; test execution and corrected runtime visual checks outstanding |
+| 2B1 — PARTIAL; corrected surfaces observed, controlled states incomplete | Native Orbit colors and exact patched-tree verification | Corrected library mapped; dark/light surfaces observed; bounded Quit/exit 0; frame/state and native C++ executions outstanding |
 | 2B2 — proposed; separate approval required | Next selected native slice | First validate corrected baseline colors with separate runtime authorization; review resources/layout before expanding |
 | 3 — proposed | Native UI redesign and trusted internal surfaces | Browser/WebUI, accessibility, keyboard and functional regression checks |
 | Later — proposed | Workspaces, split view, command palette, optional AI/sync | Separate designs, privacy/security tests and measured performance |
@@ -73,3 +73,10 @@ checks passed, but pressure 2 failed the required normal-memory gate (1). No
 launch or authorization consumption followed. The corrected visual trial remains
 blocked pending normal memory, fresh availability and full preflight; Phase 2B1
 remains PARTIAL and Phase 2B2 remains unauthorized.
+
+The subsequent 2026-10-26 memory survey reported six normal samples with stable
+swap. Fresh operator confirmation and all launch gates permitted the ONE corrected
+trial, PID 88337: native Quit, exit 0, helpers empty, no watchdog/dump and bounded
+continuity. Dark/light surfaces were observed; full controlled frame/focus/security
+acceptance remains PARTIAL. The authorization is now permanently consumed and the
+review guard retained. No existing flag authorizes another launch or Phase 2B2.

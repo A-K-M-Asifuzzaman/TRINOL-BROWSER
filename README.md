@@ -20,13 +20,16 @@ require separate review. See the [R6 report](docs/phase-1c-r6-observation-reliab
 and its one bounded native session exposed an incorrect macOS frame eligibility
 guard. The source correction compiled successfully; its regression case is tracked
 in the [native report](docs/phase-2b1-native-shell-report.md); corrected Orbit appearance
-has not been launched. No Phase 2B2 is authorized.
+was later observed in the single 2B1-V trial below. No Phase 2B2 is authorized.
 
 **Phase 2B1-V is PARTIAL:** the corrected artifact, previous trial and archives
 passed offline verification. The existing C++ test translation unit compiled
 successfully (266 actions, exit 0), but the four tests have not executed. The
-operator is unavailable and requested runtime remain untested: zero new native
-launches or captures, authorization unconsumed. See the
+single corrected-library trial now ran after six normal-memory samples and fresh
+operator confirmation. Dark/light surfaces were observed; controlled focus,
+security and frame-state coverage remains incomplete. Normal Quit, real exit 0,
+helper cleanup and valid continuity passed for this trial. Its authorization is
+permanently consumed; preserve the review guard and do not launch again. See the
 [validation report](docs/phase-2b1-v-native-visual-validation.md).
 
 **Phase 2A design foundation was approved**, independently authorized

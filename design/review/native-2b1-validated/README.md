@@ -1,4 +1,32 @@
-# Corrected native Orbit review — not captured
+# Corrected native Orbit review — PARTIAL
+
+The single 2B1-V authorization is now permanently consumed. The corrected library
+was mapped by PID 88337 in a bounded 540-second trial. Normal Quit, actual exit 0,
+helper cleanup and valid observation continuity passed. No second browser,
+watchdog message or isolated dump was observed.
+
+[dark-local-fixture.png](dark-local-fixture.png) is an unchanged, inspected native
+capture from owned window 35203, with local HTML/CSS/JavaScript PASS, actual tabs,
+toolbar and macOS traffic lights. It is not a prototype. Its SHA-256 is
+`13957d4d461bf26a2571f886f61e14d88e15a2cc1788ecfc9b6890c31a7a805a`.
+[Capture metadata](capture-metadata.json) records run/process/library/window
+identity and read-only color analysis. Full profile/process evidence stays local.
+
+Dark/light baseline surfaces were observed. A private light capture correlates
+toolbar/omnibox output with #F2F5FA/#E7ECF3 after ICC conversion. Exact frame output
+and internal key values are not established by screen pixels. Four other native
+captures contain unrelated browsing/Settings states and remain outside Git;
+intended filenames are not proof that focus or fixture states were captured.
+No clean controlled light fixture, hover/focus, PageInfo, narrow resize or
+incognito/accessibility acceptance is claimed. Full visual acceptance is PARTIAL;
+four C++ test executions remain NOT RUN. The claim and review guard are retained.
+No additional native launch or Phase 2B2 is authorized.
+
+See the [current validation report](../../../docs/phase-2b1-v-native-visual-validation.md).
+
+## Historical blocked checkpoints
+
+### Earlier status — not captured
 
 Phase 2B1-V native runtime was not executed: the operator was unavailable and
 explicitly directed that runtime remain untested. **No corrected-palette native

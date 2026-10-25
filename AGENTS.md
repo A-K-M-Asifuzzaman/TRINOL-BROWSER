@@ -62,12 +62,14 @@ Under the shared lock, exclusively create the permanent
 Never delete the claim or reuse any older retry flag. Retain the final active
 guard for visual review even after lifecycle PASS; a later run requires a new
 reviewed authorization. No Phase 2B2 or additional UI feature is authorized.
-The latest 2026-10-26 preflight had fresh operator presence but stopped at memory
-pressure 2 (normal 1 required). No launch, profile or claim was created; the
-2B1-V authorization remains unconsumed. A later attempt requires fresh present/
-unlocked operator confirmation and all prelaunch gates; never bypass or retry
-a failed gate automatically. The native test object compiled; four C++ tests
-remain unexecuted.
+Phase 2B1-V is now consumed: after six normal-memory samples and fresh operator
+confirmation, PID 88337 ran for 540 seconds and exited 0 after accepted native
+Quit, with helper cleanup, no extra browser, no watchdog/dump and valid continuity.
+Corrected dark/light surface colors were observed; controlled focus/hover/security
+and frame validation remain PARTIAL. Preserve its permanent claim and active
+PENDING_REVIEW guard unchanged; the separate local visual review is PARTIAL.
+No additional native launch is authorized by any existing flag. Four C++ tests
+remain unexecuted. No Phase 2B2 is authorized.
 
 ## Quality and tests
 

@@ -2,7 +2,8 @@
 
 Status: native implementation architecture; Phase 2A now has an independently
 authorized standalone design prototype. Phase 2B1 adds a native ColorProvider
-slice through reproducible patches; corrected visual acceptance remains pending.
+slice through reproducible patches; corrected surfaces have been observed, while
+full controlled frame/state visual acceptance remains partial.
 See [the UI contract](design/native-ui-integration-plan.md) and
 [native report](phase-2b1-native-shell-report.md).
 
