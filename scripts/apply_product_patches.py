@@ -255,14 +255,100 @@ def apply_contract(product, checkout, apply=False):
                 overlays=[t.relative_to(checkout).as_posix() for _, t in overlays], applied=applied)
 
 
+def transition_contract(product, checkout, revision, apply=False):
+    """Append to an exact applied contract recorded in immutable product Git."""
+    product, checkout = Path(product).resolve(strict=True), Path(checkout).resolve(strict=True)
+    if not re.fullmatch('[0-9a-f]{40}', revision):
+        raise ContractError('Full previous product commit required')
+    if (product == checkout or product.is_relative_to(checkout) or
+            checkout.is_relative_to(product)):
+        raise ContractError('Product and checkout must be separate')
+    if Path(git(product, 'rev-parse', '--show-toplevel')).resolve() != product:
+        raise ContractError('Product must be its Git root')
+    if Path(git(checkout, 'rev-parse', '--show-toplevel')).resolve() != checkout:
+        raise ContractError('Checkout must be its Git root')
+
+    def previous_bytes(name):
+        return subprocess.check_output(
+            ['git', '-C', str(product), 'show', revision + ':' + name], timeout=120)
+
+    previous = json.loads(previous_bytes('upstream/manifest.json'))
+    current = json.loads(safe_path(product, 'upstream/manifest.json').read_text())
+    if (previous['chromium']['revision'] != current['chromium']['revision'] or
+            git(checkout, 'rev-parse', 'HEAD') != current['chromium']['revision']):
+        raise ContractError('Suffix transition cannot change pinned source')
+    old_patches = previous.get('customization', {}).get('patches', [])
+    new_patches, _ = product_contract(product, current)
+    if current['customization']['patches'][:len(old_patches)] != old_patches:
+        raise ContractError('Existing patch prefix must remain byte-identical')
+    old_overlays = previous.get('overlays', [])
+    if current.get('overlays', [])[:len(old_overlays)] != old_overlays:
+        raise ContractError('Existing overlay prefix must remain unchanged')
+    with tempfile.TemporaryDirectory(prefix='trinol-previous-contract-') as temp:
+        baseline = Path(temp).resolve()
+
+        def preserve(name, content):
+            target = safe_path(baseline, name)
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if target.exists():
+                if target.read_bytes() != content:
+                    raise ContractError('Conflicting previous contract file')
+            else:
+                with target.open('xb') as stream:
+                    stream.write(content)
+
+        preserve('patches/series', ('\n'.join(p['path'] for p in old_patches) + '\n').encode())
+        for entry in old_patches:
+            name = 'patches/' + entry['path']
+            safe_path(baseline, name)
+            preserve(name, previous_bytes(name))
+        for entry in old_overlays:
+            safe_path(baseline, entry['source'])
+            preserve(entry['source'], previous_bytes(entry['source']))
+        verify_source_state(baseline, checkout, previous)
+    expected_outputs(product, checkout, current)
+    overlays = []
+    for entry in current.get('overlays', [])[len(old_overlays):]:
+        target = safe_path(checkout, entry['destination'])
+        if target.exists():
+            raise ContractError('New overlay destination already exists')
+        overlays.append((safe_path(product, entry['source']), target))
+    applied = []
+    try:
+        if apply:
+            for patch in new_patches[len(old_patches):]:
+                git(checkout, 'apply', '--whitespace=error-all', '--check', str(patch))
+                git(checkout, 'apply', str(patch))
+                applied.append('patches/' + patch.relative_to(product / 'patches').as_posix())
+            for source, target in overlays:
+                safe_path(checkout, target.relative_to(checkout).as_posix())
+                target.parent.mkdir(parents=True, exist_ok=True)
+                with target.open('xb') as stream:
+                    stream.write(source.read_bytes())
+                applied.append(target.relative_to(checkout).as_posix())
+            verify_source_state(product, checkout, current)
+    except (OSError, subprocess.SubprocessError, ValueError) as exc:
+        raise ContractError(str(exc), applied) from exc
+    return dict(mode='apply-suffix' if apply else 'check-suffix',
+                previous_product_revision=revision, revision=current['chromium']['revision'],
+                preserved_patches=len(old_patches),
+                suffix=[p.name for p in new_patches[len(old_patches):]], applied=applied)
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('--product-root', type=Path, default=ROOT)
     parser.add_argument('--checkout', required=True, type=Path)
     parser.add_argument('--apply', action='store_true', help='Write reviewed patches/overlays; default is check only')
+    parser.add_argument('--from-product-revision',
+                        help='Append only after the exact applied contract in this full product commit')
     args = parser.parse_args()
     try:
-        print(json.dumps(apply_contract(args.product_root, args.checkout, args.apply), indent=2))
+        result = (transition_contract(args.product_root, args.checkout,
+                                      args.from_product_revision, args.apply)
+                  if args.from_product_revision else
+                  apply_contract(args.product_root, args.checkout, args.apply))
+        print(json.dumps(result, indent=2))
         return 0
     except (OSError, ValueError, KeyError, TypeError, subprocess.SubprocessError) as exc:
         print(json.dumps(dict(error=str(exc), applied=getattr(exc, 'applied', []),

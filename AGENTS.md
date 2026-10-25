@@ -71,6 +71,17 @@ PENDING_REVIEW guard unchanged; the separate local visual review is PARTIAL.
 No additional native launch is authorized by any existing flag. Four C++ tests
 remain unexecuted. No Phase 2B2 is authorized.
 
+Phase 2B2 is now explicitly authorized for a real Orbit New Tab WebUI, exact
+suffix/overlay transitions, focused tests and resource-guarded one-job incremental
+compilation. Preserve both color patches, source/tool pins, GN arguments, prior
+artifacts, the consumed 2B1-V claim and all review/historical markers. Justified
+incremental GN generation may retain the exact existing arguments. Inspect the
+build graph and stop for architectural review on unexpectedly broad work. This
+phase does NOT authorize any native browser launch: future runtime validation
+requires a separately reviewed one-use authorization and fresh operator presence.
+Do not reuse or clear old gates. Keep prior regression gaps explicit. No sidebar,
+workspaces, command palette, AI, app rename or next phase is authorized.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns

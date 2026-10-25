@@ -8,7 +8,7 @@ import tempfile
 import unittest
 from unittest.mock import patch
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]/'scripts'))
-from apply_product_patches import apply_contract, ContractError, git, verify_source_state, expected_outputs
+from apply_product_patches import apply_contract, ContractError, git, verify_source_state, expected_outputs, transition_contract
 
 
 class PatchTests(unittest.TestCase):
@@ -45,6 +45,141 @@ class PatchTests(unittest.TestCase):
 
     def save(self):
         (self.product/'upstream/manifest.json').write_text(json.dumps(self.manifest))
+
+    def prepare_transition(self):
+        apply_contract(self.product, self.checkout, True)
+        git(self.product, 'init', '-q')
+        git(self.product, 'config', 'user.name', 'Synthetic Test')
+        git(self.product, 'config', 'user.email', 'test@example.invalid')
+        git(self.product, 'add', '.')
+        git(self.product, 'commit', '-qm', 'previous exact contract')
+        revision = git(self.product, 'rev-parse', 'HEAD')
+        (self.product/'patches/third.patch').write_text(
+            'diff --git a/file.txt b/file.txt\n--- a/file.txt\n+++ b/file.txt\n'
+            '@@ -1 +1 @@\n-three\n+four\n')
+        (self.product/'patches/series').write_text('first.patch\nsecond.patch\nthird.patch\n')
+        self.manifest['customization']['patches'].append(dict(path='third.patch',
+            sha256=hashlib.sha256((self.product/'patches/third.patch').read_bytes()).hexdigest()))
+        self.manifest['customization']['files'][0]['sha256'] = hashlib.sha256(b'four\n').hexdigest()
+        self.save()
+        return revision
+
+    def test_suffix_check_preserves_dirty_baseline_index_and_objects(self):
+        revision = self.prepare_transition()
+        index = (self.checkout/'.git/index').read_bytes()
+        objects = set((self.checkout/'.git/objects').rglob('*'))
+        before = (self.checkout/'file.txt').read_bytes()
+        result = transition_contract(self.product, self.checkout, revision)
+        self.assertEqual(result['suffix'], ['third.patch'])
+        self.assertEqual(result['applied'], [])
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), before)
+        self.assertEqual((self.checkout/'.git/index').read_bytes(), index)
+        self.assertEqual(set((self.checkout/'.git/objects').rglob('*')), objects)
+
+    def test_suffix_applies_only_new_tail_and_cannot_repeat(self):
+        revision = self.prepare_transition()
+        patches = [(self.product/'patches'/name).read_bytes()
+                   for name in ('first.patch', 'second.patch')]
+        result = transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual(result['applied'], ['patches/third.patch'])
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), b'four\n')
+        self.assertEqual(verify_source_state(self.product, self.checkout, self.manifest), 'applied')
+        self.assertEqual(patches, [(self.product/'patches'/name).read_bytes()
+                                  for name in ('first.patch', 'second.patch')])
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+
+    def test_suffix_rejects_pin_prefix_and_revision_bypasses(self):
+        revision = self.prepare_transition()
+        for invalid in ('HEAD', revision[:8], '../file'):
+            with self.assertRaises(ContractError):
+                transition_contract(self.product, self.checkout, invalid)
+        self.manifest['chromium']['revision'] = '0'*40
+        self.save()
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision)
+        self.manifest['chromium']['revision'] = git(self.checkout, 'rev-parse', 'HEAD')
+        self.manifest['customization']['patches'][0]['sha256'] = '0'*64
+        self.save()
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision)
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), b'three\n')
+
+    def test_suffix_rejects_unrelated_or_tampered_source(self):
+        revision = self.prepare_transition()
+        (self.checkout/'file.txt').write_text('unrelated edit\n')
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual((self.checkout/'file.txt').read_text(), 'unrelated edit\n')
+        (self.checkout/'file.txt').write_text('three\n')
+        (self.checkout/'unrelated.txt').write_text('preserve\n')
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual((self.checkout/'unrelated.txt').read_text(), 'preserve\n')
+
+    def test_suffix_checks_prospective_output_before_any_write(self):
+        revision = self.prepare_transition()
+        self.manifest['customization']['files'][0]['sha256'] = '0'*64
+        self.save()
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), b'three\n')
+
+    def test_suffix_rejects_rehashed_old_patch_and_symlink_source(self):
+        revision = self.prepare_transition()
+        first = self.product/'patches/first.patch'
+        original = first.read_bytes()
+        first.write_bytes(original + b'\n')
+        self.manifest['customization']['patches'][0]['sha256'] = hashlib.sha256(first.read_bytes()).hexdigest()
+        self.save()
+        with self.assertRaisesRegex(ContractError, 'prefix'):
+            transition_contract(self.product, self.checkout, revision, True)
+        first.write_bytes(original)
+        self.manifest['customization']['patches'][0]['sha256'] = hashlib.sha256(original).hexdigest()
+        self.save()
+        (self.checkout/'file.txt').unlink()
+        (self.checkout/'file.txt').symlink_to(first)
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+        self.assertTrue((self.checkout/'file.txt').is_symlink())
+
+    def test_suffix_reports_applied_work_without_rollback_on_postcheck_failure(self):
+        revision = self.prepare_transition()
+        with patch('apply_product_patches.verify_source_state',
+                   side_effect=['applied', ContractError('postcheck failed')]):
+            with self.assertRaises(ContractError) as error:
+                transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual(error.exception.applied, ['patches/third.patch'])
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), b'four\n')
+
+    def test_suffix_new_overlay_is_exclusive_and_old_prefix_is_preserved(self):
+        revision = self.prepare_transition()
+        source = self.product/'logo.svg'; source.write_text('<svg/>')
+        digest = hashlib.sha256(source.read_bytes()).hexdigest()
+        self.manifest['overlays'] = [dict(source='logo.svg', destination='trinol/logo.svg', sha256=digest)]
+        self.manifest['customization']['files'].append(
+            dict(path='trinol/logo.svg', mode='100644', sha256=digest))
+        self.save()
+        transition_contract(self.product, self.checkout, revision)
+        self.assertFalse((self.checkout/'trinol').exists())
+        transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual((self.checkout/'trinol/logo.svg').read_text(), '<svg/>')
+
+    def test_suffix_does_not_overwrite_ignored_overlay(self):
+        revision = self.prepare_transition()
+        (self.product/'logo.svg').write_text('<svg/>')
+        digest = hashlib.sha256(b'<svg/>').hexdigest()
+        self.manifest['overlays'] = [dict(source='logo.svg', destination='trinol/logo.svg', sha256=digest)]
+        self.manifest['customization']['files'].append(
+            dict(path='trinol/logo.svg', mode='100644', sha256=digest))
+        self.save()
+        (self.checkout/'.git/info/exclude').write_text('trinol/\n')
+        (self.checkout/'trinol').mkdir()
+        (self.checkout/'trinol/logo.svg').write_text('unrelated ignored content')
+        with self.assertRaises(ContractError):
+            transition_contract(self.product, self.checkout, revision, True)
+        self.assertEqual((self.checkout/'trinol/logo.svg').read_text(), 'unrelated ignored content')
+        self.assertEqual((self.checkout/'file.txt').read_bytes(), b'three\n')
 
     def test_dependent_check_is_read_only_and_apply_is_ordered(self):
         index = (self.checkout/'.git/index').read_bytes()
