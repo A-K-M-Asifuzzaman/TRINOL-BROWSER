@@ -331,3 +331,11 @@ executable would require 7,100 actions and remains deferred; no test execution
 is claimed. Operator unavailability blocked the corrected visual trial, as
 explicitly requested. No new browser launch/capture or authorization consumption
 occurred. Historical findings above remain unchanged; Phase 2B1 stays PARTIAL.
+
+## Phase 2B1-V FINAL operator gate — 2026-10-25
+
+**BLOCKED — OPERATOR UNAVAILABLE — AUTHORIZATION UNCONSUMED.** The fresh reply
+was “Not available; leave authorization unconsumed.” No native trial or prelaunch
+checks followed; no claim/profile/capture was created by this attempt. All new
+visual, functional and lifecycle results remain NOT TESTED. Prior compilation
+and runtime evidence above remain historical. See the [FINAL checkpoint](phase-2b1-v-native-visual-validation.md#final-request--operator-gate-stopped-the-trial).

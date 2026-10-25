@@ -20,3 +20,8 @@ synthetic coverage; the underlying WindowServer mechanism was tested in 2B1.
 The [older native captures](../native-2b1/README.md) show the pre-correction palette.
 [Phase 2A images](../README.md) show a standalone prototype. Neither is corrected
 native acceptance evidence. See the [validation report](../../../docs/phase-2b1-v-native-visual-validation.md).
+
+The separately requested FINAL trial was also blocked by the fresh response
+“Not available; leave authorization unconsumed.” No prelaunch checks, native
+launch or capture followed. **BLOCKED — OPERATOR UNAVAILABLE — AUTHORIZATION
+UNCONSUMED.** This directory still contains no corrected native screenshot.

@@ -61,3 +61,9 @@ while unavailable, so the exact one-use visual authorization remains unconsumed
 and no corrected native screenshot/exit event exists. See the
 [visual-validation report](phase-2b1-v-native-visual-validation.md). Resume only
 with fresh operator availability and revalidated safety/evidence; no Phase 2B2.
+
+The separately requested 2B1-V FINAL trial also stopped at the fresh operator gate:
+“Not available; leave authorization unconsumed.” **BLOCKED — OPERATOR UNAVAILABLE
+— AUTHORIZATION UNCONSUMED.** No prelaunch checks or native execution followed.
+The same one-use trial remains pending fresh confirmation and full preflight;
+no corrected visual acceptance or Phase 2B2 readiness is established.

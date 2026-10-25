@@ -6,6 +6,37 @@ translation-unit compilation passed. Native visual/lifecycle validation is
 untested. Zero new browser launches, no new profile, no authorization consumed.
 No Phase 2B2 is authorized.
 
+## FINAL request — operator gate stopped the trial
+
+**BLOCKED — OPERATOR UNAVAILABLE — AUTHORIZATION UNCONSUMED**
+
+For the separately requested FINAL trial, the fresh operator response was:
+“Not available; leave authorization unconsumed.” The current trial stopped at
+that mandatory gate. No prelaunch health/source/artifact checks were rerun, no
+browser or build was started, and no claim, guard, profile, Crashpad directory or
+screenshot was created by this attempt. Prior offline hashes and host-health
+measurements below are historical; they are not new verification of the current
+external build environment. Existing evidence and markers were not modified.
+
+Product main and origin/main matched the requested baseline
+`54d777fe7287d7897690578dbeb97f820f1772c1` after fetch, with zero divergence.
+Authenticated owner and the existing Git author were verified. This checkpoint
+changes documentation and manifest reporting only. Native PID/library mapping,
+dark/light appearance, tab/toolbar/focus, geometry, browsing/security, actual exit
+status, helper cleanup, watchdog and dump observations are all **NOT TESTED** for
+this attempt. No new exit code exists. The historical C++ translation-unit
+compilation remains PASS; the four test executions remain NOT RUN. No expensive
+unit_tests build or Phase 2B2 work is authorized here.
+
+For this documentation checkpoint, 235 Python tests and four Node model tests
+passed again, along with foundation validation, Python syntax, audit shell
+syntax and Git whitespace checks. These offline checks do not establish a
+native visual or lifecycle result.
+
+The next action requires a fresh explicit present/unlocked operator confirmation,
+then all prescribed prelaunch checks, before the same unconsumed one-use trial.
+Phase 2B1 remains PARTIAL; this FINAL trial is BLOCKED, not visually accepted.
+
 ## Exact baseline and offline evidence
 
 Reviewed product commit: `78406695aff1ad397aedf42a1e5fef28213ef095`, clean main,
