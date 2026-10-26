@@ -1,0 +1,7 @@
+import("//tools/grit/grit_rule.gni")
+
+grit_strings("strings") {
+  source = "strings.grd"
+  output_prefix = "trinol_new_tab_strings_"
+  outputs = [ "grit/trinol_new_tab_strings.h" ]
+}

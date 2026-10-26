@@ -85,3 +85,25 @@ claims. Performance and crash behavior need measured baselines.
 The principal risks are upstream patch drift, UI regressions, resource pressure,
 service restrictions and timely security updates. Small patches, explicit pins,
 a baseline build and release gates are the chosen controls.
+
+## Phase 2B2 New Tab integration
+
+The approved native New Tab slice reuses Chromium's existing trusted
+`chrome://new-tab-page-third-party/` controller, resource map and normal New Tab
+rewrite. Desktop local New Tabs use bundled Orbit resources. Enterprise policy
+and extension overrides retain their earlier upstream routing precedence; valid
+non-Google provider remote New Tabs remain supported. Incognito and guest rules
+remain separate. This approval does not resolve historical lifecycle findings.
+
+An argument-free typed Mojo operation focuses the owning visible browser's real
+omnibox only after trusted-origin, profile and transient-user-activation checks.
+Search preferences, suggestions, query encoding and navigation stay in Chromium.
+No web search backend, query IPC or credential access is added. Top Sites binding
+is deferred because its prepopulation behavior needs a separate product decision;
+the page exposes an honest empty state and the native History link.
+
+The existing profile theme bridge supplies browser appearance. Separate owned
+GRIT strings and static HTML/CSS/TypeScript/SVG are incorporated through the ordered
+patch/overlay contract. See the [implementation and verification report](phase-2b2-new-tab-report.md)
+for actual compilation results and remaining native acceptance checks. Phase 2B2
+authorizes implementation and guarded compilation, not another native launch.

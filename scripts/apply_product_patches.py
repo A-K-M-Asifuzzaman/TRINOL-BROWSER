@@ -156,8 +156,12 @@ def verify_source_state(product, checkout, manifest, state='applied'):
     if state != 'applied':
         raise ContractError('Unknown source verification state')
     files = expected_outputs(product, checkout, manifest)
-    if changed | untracked != set(files):
-        raise ContractError('Unexpected/missing source changes: ' + repr(sorted((changed | untracked) ^ set(files))))
+    # Global ignore rules can hide declared source additions; their bytes still require verification.
+    declared_ignored = set(filter(None, git(checkout, 'ls-files', '--others', '--ignored',
+        '--exclude-standard', '-z', '--', *files).split('\0'))) if files else set()
+    observed = changed | untracked | declared_ignored
+    if observed != set(files):
+        raise ContractError('Unexpected/missing source changes: ' + repr(sorted(observed ^ set(files))))
     for name, record in files.items():
         target = safe_path(checkout, name)
         if record['mode'] is None:

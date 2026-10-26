@@ -188,10 +188,27 @@ class PatchTests(unittest.TestCase):
         self.assertEqual((self.checkout/'file.txt').read_text(),'one\n')
         self.assertEqual((self.checkout/'.git/index').read_bytes(),index)
         self.assertEqual(set((self.checkout/'.git/objects').rglob('*')),objects)
+
         result=apply_contract(self.product,self.checkout,True)
         self.assertEqual(result['applied'],['patches/first.patch','patches/second.patch'])
         self.assertEqual((self.checkout/'file.txt').read_text(),'three\n')
         with self.assertRaises(ContractError): apply_contract(self.product,self.checkout,True)
+
+    def test_declared_ignored_overlay_is_verified_without_ignoring_tampering(self):
+        (self.product/'logo.svg').write_text('<svg/>')
+        digest = hashlib.sha256(b'<svg/>').hexdigest()
+        self.manifest['overlays'] = [dict(source='logo.svg', destination='trinol/logo.svg', sha256=digest)]
+        self.declare()
+        (self.checkout/'.git/info/exclude').write_text('trinol/\n')
+        apply_contract(self.product, self.checkout, True)
+        self.assertEqual(verify_source_state(self.product, self.checkout, self.manifest), 'applied')
+        target = self.checkout/'trinol/logo.svg'
+        target.write_text('tampered')
+        with self.assertRaisesRegex(ContractError, 'content/mode'):
+            verify_source_state(self.product, self.checkout, self.manifest)
+        target.unlink()
+        with self.assertRaisesRegex(ContractError, 'missing'):
+            verify_source_state(self.product, self.checkout, self.manifest)
 
     def test_wrong_pin_and_dirty_or_untracked_checkout_rejected(self):
         self.manifest['chromium']['revision']='0'*40;self.save()

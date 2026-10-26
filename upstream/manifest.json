@@ -17,7 +17,18 @@
     "selection": "Matches the selected Chromium DEPS pin"
   },
   "patch_series": "patches/series",
-  "overlays": [],
+  "overlays": [
+    {
+      "source": "trinol/new_tab/BUILD.gn",
+      "destination": "trinol/new_tab/BUILD.gn",
+      "sha256": "bbdcdc42ccef68366b634dfbfbb50ac1e648f232adab2cb8d0757357ecae8bd2"
+    },
+    {
+      "source": "trinol/new_tab/strings.grd",
+      "destination": "trinol/new_tab/strings.grd",
+      "sha256": "151be982c9f4640979fe92fc313be4deeef5f5ce15b3d89cd10cc2160bec3ecf"
+    }
+  ],
   "verification": {
     "source_head": true,
     "depot_tools_head": true,
@@ -438,7 +449,7 @@
   },
   "customization": {
     "schema_version": 1,
-    "id": "orbit-native-shell-v1",
+    "id": "orbit-native-new-tab-v1",
     "upstream_revision": "0e66b94549a8bd85f03fbdf189b752d6e7b63c32",
     "patches": [
       {
@@ -448,6 +459,10 @@
       {
         "path": "0002-orbit-macos-native-frame.patch",
         "sha256": "eccf9ae094230b21dd96915f399433ac4640d06a9a965f76ad4f7420be207b66"
+      },
+      {
+        "path": "0003-orbit-native-new-tab.patch",
+        "sha256": "5e38b9420c173799c1d0b983caa1c63e37aa7761e863edc570e4e70b89d89627"
       }
     ],
     "files": [
@@ -460,6 +475,111 @@
         "path": "chrome/browser/ui/color/material_tab_strip_color_mixer_unittest.cc",
         "mode": "100644",
         "sha256": "8eae6b0e9d90695eabb255433c926c121acf71125b802160a7f4698cc1fb3609"
+      },
+      {
+        "path": "tools/gritsettings/resource_ids.spec",
+        "mode": "100644",
+        "sha256": "b2e21dd53717a639c74a36346825c09899e4e95ed7209731db7b4c6396b81ba2"
+      },
+      {
+        "path": "chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc",
+        "mode": "100644",
+        "sha256": "87a36ee8aba81b9d5e8285a61d53b48c6b0b99fe05dd1cac1897eaf92437dc32"
+      },
+      {
+        "path": "chrome/browser/resources/new_tab_page_third_party/BUILD.gn",
+        "mode": "100644",
+        "sha256": "ea41b20350cf2f99ae0b1ecbcd270ea7e877051f673f97bce9fb3770cedcb534"
+      },
+      {
+        "path": "chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.html",
+        "mode": "100644",
+        "sha256": "6dc2f23480ee531897de696ec4d58175cafbf6ec4ee91d354a36aff1dae5fc21"
+      },
+      {
+        "path": "chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.ts",
+        "mode": "100644",
+        "sha256": "eeb583c3fe17062d9e3ca8c5a91b4cb34523a71ce3eca092d7fed4418d629fbf"
+      },
+      {
+        "path": "chrome/browser/resources/new_tab_page_third_party/orbit-mark.svg",
+        "mode": "100644",
+        "sha256": "27c9d20905e85e731caf0ae3db1ec13fc3851310be6be2f1e42f9204bb809159"
+      },
+      {
+        "path": "chrome/browser/resources/new_tab_page_third_party/orbit.css",
+        "mode": "100644",
+        "sha256": "e006fc0f2c2830d81bc371a21660c5caca0743472ca35802029a436485d7897a"
+      },
+      {
+        "path": "chrome/browser/search/search.cc",
+        "mode": "100644",
+        "sha256": "2996abe3f751e2c08cda691427862b2e679cd79331039cb2e08eedb66c813d28"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/BUILD.gn",
+        "mode": "100644",
+        "sha256": "d4f8ecbbf27f6346db19e2599fb87fcdf0b592b2ea5ae4bcda6545f89c757050"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom",
+        "mode": "100644",
+        "sha256": "2682dd8ead2b5850b2fd75bcdb664ef8efe6b34497764ed7bb2341d6a612d9e1"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.cc",
+        "mode": "100644",
+        "sha256": "7df3fcb00b3895bf91910268831dafe4eeef97c0197b4ca73cf45c2d0616b39d"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h",
+        "mode": "100644",
+        "sha256": "9ca68b50b0d86518f0485364aafde93868aa8024cc6db920fc99ed069f30c43b"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.cc",
+        "mode": "100644",
+        "sha256": "aaea070fc6283d6a42ee2b5f9391fa1c32f026ac805397d854d0433fcf761c26"
+      },
+      {
+        "path": "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h",
+        "mode": "100644",
+        "sha256": "5f25dde322f4d455870fc6f50b23a42bd1330df48a810f8bf848bd1a7bbd3c75"
+      },
+      {
+        "path": "chrome/chrome_repack_locales.gni",
+        "mode": "100644",
+        "sha256": "17fab3bd15e8ddab0d0580adc908ba72c18b1b200997ee9cd909d9a2662db7b9"
+      },
+      {
+        "path": "chrome/test/data/webui/BUILD.gn",
+        "mode": "100644",
+        "sha256": "ec5925be4c4a930aacc8b8465390ac85c1b37d25162f3d2afd9753bc93d90101"
+      },
+      {
+        "path": "chrome/test/data/webui/new_tab_page_third_party/BUILD.gn",
+        "mode": "100644",
+        "sha256": "6d46882dd700c562f7161f6e2dd056118a4cf0e6b4b8113a2433fc71cb2a55b9"
+      },
+      {
+        "path": "chrome/test/data/webui/new_tab_page_third_party/orbit_browsertest.cc",
+        "mode": "100644",
+        "sha256": "2268d8d513d985fcfae65eb325ef10ef42372af5b3965603473c9ef6304da66f"
+      },
+      {
+        "path": "chrome/test/data/webui/new_tab_page_third_party/orbit_test.ts",
+        "mode": "100644",
+        "sha256": "f662e304f708a8b6ecdb9f723faebf7bee891eccdd82baa227a8b5a1ec3ce788"
+      },
+      {
+        "path": "trinol/new_tab/BUILD.gn",
+        "mode": "100644",
+        "sha256": "bbdcdc42ccef68366b634dfbfbb50ac1e648f232adab2cb8d0757357ecae8bd2"
+      },
+      {
+        "path": "trinol/new_tab/strings.grd",
+        "mode": "100644",
+        "sha256": "151be982c9f4640979fe92fc313be4deeef5f5ce15b3d89cd10cc2160bec3ecf"
       }
     ]
   },
@@ -712,6 +832,68 @@
       "site_security_pageinfo": "NOT TESTED",
       "traffic_lights_at_one_size": "PASS observed",
       "narrow_resize_incognito_custom_theme_high_contrast": "NOT TESTED"
+    }
+  },
+  "native_new_tab": {
+    "phase": "2b2",
+    "status": "implemented_and_compiled_native_acceptance_pending",
+    "report": "docs/phase-2b2-new-tab-report.md",
+    "native_launch_authorized": false,
+    "shortcuts": "Deferred; no profile-data binding or prepopulated tiles",
+    "search": "Argument-free native omnibox focus with browser-side profile/origin/visibility/gesture checks; runtime pending",
+    "localization": "Separate GRIT strings target; English fallback; translations not yet supplied",
+    "gn_generation_authorized": true,
+    "build": {
+      "target": "chrome",
+      "jobs": 1,
+      "remote_execution": false,
+      "exit_code": 0,
+      "completed_actions": 494,
+      "completed_cxx_actions": 14,
+      "evidence": "logs/phase1c-build-3by1eue0",
+      "profiling_warning": "Siso timing-summary consistency warning retained; weighted timing statistics not relied upon"
+    },
+    "verification": {
+      "source_state": "exact_applied_contract",
+      "existing_resource_id_ranges_changed": 0,
+      "python_tests": 253,
+      "prototype_model_tests": 4,
+      "production_and_test_typescript": "PASS compiled/type-checked",
+      "production_css_lint": "PASS",
+      "native_browser_tests": "Four cases compiled in focused object; NOT EXECUTED; browser_tests binary not linked",
+      "native_visual": "NOT TESTED; no launch authorized",
+      "preserved_root_artifacts": 521,
+      "preserved_bundle_files": 347,
+      "protected_markers_unchanged": 5,
+      "final_chrome_dry_run": "PASS, zero steps after test-only correction",
+      "final_chrome_dry_run_evidence": "logs/phase2b2-dry-63203pbh"
+    },
+    "artifact_hashes": {
+      "Chromium.app/Contents/MacOS/Chromium": "62fa3b0be1ef7404d53911c5b28777da7ce441483b00b6271f4a4da494501fae",
+      "libchrome_dll.dylib": "1ae9d063141a0dedd309cde33fb5312ac7ca2caa3697c759b25e90043581d527",
+      "Chromium Framework.framework/Versions/155.0.8059.85/Resources/resources.pak": "31e7050a1e730ab9720a9c03f309e9affa943c5eeba887d5490a79cbd984ed5e",
+      "Chromium Framework.framework/Versions/155.0.8059.85/Resources/en.lproj/locale.pak": "8fb0e6cf49da6023c917062d142b0e37814a86f01a930e5564b280133a7ff72c",
+      "args.gn": "cabeadd749736e664c312aca9303a57edd103c34fcc39d66d782128c4f44c1ab",
+      "Chromium.app/Contents/Frameworks/Chromium Framework.framework/Versions/155.0.8059.85/Resources/resources.pak": "31e7050a1e730ab9720a9c03f309e9affa943c5eeba887d5490a79cbd984ed5e",
+      "Chromium.app/Contents/Frameworks/Chromium Framework.framework/Versions/155.0.8059.85/Resources/en.lproj/locale.pak": "8fb0e6cf49da6023c917062d142b0e37814a86f01a930e5564b280133a7ff72c"
+    },
+    "source_contract_sha256": "041b497f44285a8e2708f8f20de0a9adede7555eb5c38bcd4363ace2d4ce147d",
+    "build_resource_observations": {
+      "pressure_levels": [
+        2
+      ],
+      "max_swap_growth_mib": 315.44,
+      "max_sample_interval_seconds": 38.824,
+      "min_external_available_gib": 247.356,
+      "min_internal_available_gib": 64.945
+    },
+    "native_test_object": {
+      "target": "obj/chrome/test/data/webui/browser_tests/orbit_browsertest.o",
+      "jobs": 1,
+      "exit_code": 0,
+      "completed_actions": 5,
+      "evidence": "logs/phase2b2-object-zd_t3feg",
+      "prior_compile_failure": "Five legacy Browser::profile() calls corrected using pinned chrome_test_utils; production inputs unchanged"
     }
   }
 }

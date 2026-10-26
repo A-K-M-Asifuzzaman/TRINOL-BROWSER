@@ -1,0 +1,1329 @@
+diff --git a/tools/gritsettings/resource_ids.spec b/tools/gritsettings/resource_ids.spec
+--- a/tools/gritsettings/resource_ids.spec
++++ b/tools/gritsettings/resource_ids.spec
+@@ -1812,6 +1812,11 @@
+     "includes": [12000],
+   },
+ 
++  # Owned strings follow the reserved tail so existing assigned IDs stay stable.
++  "trinol/new_tab/strings.grd": {
++    "messages": [12010],
++  },
++
+   # END "everything else" section.
+   # Everything but chrome/, components/, content/, and ios/
+ 
+diff --git a/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc b/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
+--- a/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
++++ b/chrome/browser/chrome_browser_interface_binders_webui_parts_desktop.cc
+@@ -673,7 +673,6 @@
+   }
+ 
+   registry.ForWebUI<NewTabPageThirdPartyUI>()
+-      .Add<most_visited::mojom::MostVisitedPageHandlerFactory>()
+       .Add<new_tab_page_third_party::mojom::PageHandlerFactory>();
+ 
+   if (base::FeatureList::IsEnabled(
+diff --git a/chrome/browser/resources/new_tab_page_third_party/BUILD.gn b/chrome/browser/resources/new_tab_page_third_party/BUILD.gn
+--- a/chrome/browser/resources/new_tab_page_third_party/BUILD.gn
++++ b/chrome/browser/resources/new_tab_page_third_party/BUILD.gn
+@@ -9,7 +9,11 @@
+ 
+ build_webui("build") {
+   grd_prefix = "new_tab_page_third_party"
+-  static_files = [ "new_tab_page_third_party.html" ]
++  static_files = [
++    "new_tab_page_third_party.html",
++    "orbit.css",
++    "orbit-mark.svg",
++  ]
+   ts_files = [
+     "browser_proxy.ts",
+     "new_tab_page_third_party.ts",
+@@ -19,9 +23,9 @@
+   mojo_files = [ "$root_gen_dir/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom-webui.ts" ]
+ 
+   ts_deps = [
+-    "//ui/webui/resources/cr_components/most_visited:build_ts",
+     "//ui/webui/resources/js:build_ts",
+     "//ui/webui/resources/mojo:build_ts",
+   ]
++  ts_composite = true
+   webui_context_type = "trusted"
+ }
+diff --git a/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.html b/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.html
+--- a/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.html
++++ b/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.html
+@@ -1,57 +1,44 @@
+ <!doctype html>
+-<html dir="$i18n{textdirection}" lang="$i18n{language}"
+-    $i18n{hascustombackground} $i18n{isdark} $i18n{webuiRoundedIconsAttribute}>
+-  <head>
+-    <meta charset="utf-8">
+-    <title>$i18n{title}</title>
+-    <style>
+-      html {
+-        --ntp-focus-shadow-color: rgba(var(--google-blue-600-rgb), .4);
+-        --ntp-theme-text-color: var(--google-grey-800);
+-        background-attachment: fixed;
+-        background-color: $i18n{colorBackground};
+-        background-position: $i18n{backgroundPosition};
+-        background-repeat: $i18n{backgroundTiling};
+-        height: 100%;
+-        overflow: auto;
+-      }
+-
+-      @media (prefers-color-scheme: dark) {
+-        html {
+-          --ntp-focus-shadow-color: rgba(var(--google-blue-300-rgb), .5);
+-          --ntp-theme-text-color: white;
+-        }
+-      }
+-
+-      html[has-custom-background] {
+-        background-image: image-set(
+-            url(chrome://theme/IDR_THEME_NTP_BACKGROUND?$i18n{themeId}) 1x,
+-            url(chrome://theme/IDR_THEME_NTP_BACKGROUND@2x?$i18n{themeId}) 2x);
+-      }
+-
+-      body {
+-        align-items: center;
+-        display: flex;
+-        height: 100vh;
+-        justify-content: center;
+-        margin: 0;
+-      }
+-
+-      cr-most-visited {
+-        --most-visited-focus-shadow: 0 0 0 2px var(--ntp-focus-shadow-color);
+-        --most-visited-text-color: var(--ntp-theme-text-color);
+-        --most-visited-text-shadow: none;
+-      }
+-
+-      html[has-custom-background] cr-most-visited {
+-        --most-visited-text-shadow: 0 0 16px rgba(0, 0, 0, .3);
+-      }
+-    </style>
+-  </head>
+-  <body>
+-    <script type="module" src="strings.m.js"></script>
+-    <cr-most-visited></cr-most-visited>
+-    <script type="module" src="new_tab_page_third_party.js"></script>
+-    <link rel="stylesheet" href="chrome://resources/css/text_defaults_md.css">
+-  </body>
++<html dir="$i18n{textdirection}" lang="$i18n{language}" $i18n{isdark}>
++<head>
++  <meta charset="utf-8">
++  <meta name="viewport" content="width=device-width, initial-scale=1">
++  <title>$i18n{title}</title>
++  <link rel="icon" type="image/svg+xml" href="orbit-mark.svg">
++  <link rel="stylesheet" href="orbit.css">
++  <script type="module" src="strings.m.js"></script>
++  <script type="module" src="new_tab_page_third_party.js"></script>
++</head>
++<body>
++  <main>
++    <svg class="orbit-art" viewBox="0 0 400 400" aria-hidden="true">
++      <ellipse cx="200" cy="200" rx="174" ry="75" transform="rotate(-42 200 200)"/>
++      <ellipse cx="200" cy="200" rx="174" ry="113" transform="rotate(-42 200 200)"/>
++      <path d="M52 307 261 27l83 279"/>
++      <circle cx="316" cy="97" r="5"/><circle cx="68" cy="253" r="3"/>
++    </svg>
++    <div class="content">
++      <div class="wordmark" aria-label="Trinol">
++        <svg class="orbit-mark" viewBox="0 0 64 64" fill="none" aria-hidden="true">
++          <path d="M14 44 31 10l19 35M22 31h20M10 45c11 7 34 2 43-10M13 48c13 8 36 1 42-11" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
++          <circle cx="52" cy="32" r="3.5"/>
++        </svg>
++        <span>trinol</span>
++      </div>
++      <h1>$i18n{headline}</h1>
++      <button id="search" type="button" aria-describedby="search-hint">
++        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5"/><path d="m16 16 5 5"/></svg>
++        <span>$i18n{searchAction}</span><kbd>$i18n{omniboxShortcut}</kbd>
++      </button>
++      <p id="search-hint" class="hint">$i18n{searchHint}</p>
++      <p id="focus-status" role="status" aria-live="polite"></p>
++      <section class="sites" aria-labelledby="sites-heading">
++        <h2 id="sites-heading">$i18n{sitesHeading}</h2>
++        <p>$i18n{sitesUnavailable}</p>
++        <a href="chrome://history/">$i18n{historyAction}</a>
++      </section>
++    </div>
++    <footer><a href="chrome://settings/appearance">$i18n{appearanceAction}</a><span>TrinolIT</span></footer>
++  </main>
++</body>
+ </html>
+diff --git a/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.ts b/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.ts
+--- a/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.ts
++++ b/chrome/browser/resources/new_tab_page_third_party/new_tab_page_third_party.ts
+@@ -1,32 +1,41 @@
+-// Copyright 2021 The Chromium Authors
+-// Use of this source code is governed by a BSD-style license that can be
+-// found in the LICENSE file.
+-
+-import 'chrome://resources/cr_components/most_visited/most_visited.js';
+-
++// Trinol Orbit uses the existing profile-scoped theme bridge and native omnibox.
+ import {assert} from 'chrome://resources/js/assert.js';
+ import {skColorToRgba} from 'chrome://resources/js/color_utils.js';
++import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
+ 
+ import {BrowserProxy} from './browser_proxy.js';
++import type {Theme} from './new_tab_page_third_party.mojom-webui.js';
+ 
++export function applyTheme(theme: Theme) {
++  const html = document.documentElement;
++  html.toggleAttribute('dark', theme.isDark);
++  html.toggleAttribute('custom-theme', !theme.useOrbitColors);
++  for (const property of ['--page', '--text']) {
++    html.style.removeProperty(property);
++  }
++  if (!theme.useOrbitColors) {
++    html.style.setProperty('--page', theme.colorBackground);
++    html.style.setProperty('--text', skColorToRgba(theme.textColor));
++  }
++  const query = new URLSearchParams({id: theme.id}).toString();
++  html.style.backgroundImage = theme.hasCustomBackground ?
++      `image-set(url("chrome://theme/IDR_THEME_NTP_BACKGROUND?${query}") 1x, url("chrome://theme/IDR_THEME_NTP_BACKGROUND@2x?${query}") 2x)` :
++      'none';
++  html.style.backgroundRepeat = theme.backgroundTiling;
++  html.style.backgroundPosition = theme.backgroundPosition;
++}
+ 
++const button = document.querySelector<HTMLButtonElement>('#search');
++const status = document.querySelector<HTMLElement>('#focus-status');
++assert(button && status);
++button.addEventListener('click', async () => {
++  try {
++    const {focused} = await BrowserProxy.getInstance().handler.focusOmnibox();
++    status.textContent = focused ? '' : loadTimeData.getString('focusUnavailable');
++  } catch {
++    status.textContent = loadTimeData.getString('focusUnavailable');
++  }
++});
+ const {callbackRouter, handler} = BrowserProxy.getInstance();
+-
+-callbackRouter.setTheme.addListener(theme => {
+-  const html = document.documentElement;
+-  html.toggleAttribute('has-custom-background', theme.hasCustomBackground);
+-  const style = html.style;
+-  style.backgroundColor = theme.colorBackground;
+-  const backgroundImage = `image-set(
+-      url(chrome://theme/IDR_THEME_NTP_BACKGROUND?${theme.id}) 1x,
+-      url(chrome://theme/IDR_THEME_NTP_BACKGROUND@2x?${theme.id}) 2x)`;
+-  style.backgroundImage = theme.hasCustomBackground ? backgroundImage : 'unset';
+-  style.backgroundRepeat = theme.backgroundTiling;
+-  style.backgroundPosition = theme.backgroundPosition;
+-  style.setProperty('--ntp-theme-text-color', skColorToRgba(theme.textColor));
+-
+-  const mostVisitedElement = document.querySelector('cr-most-visited');
+-  assert(mostVisitedElement);
+-  mostVisitedElement.theme = theme.mostVisited;
+-});
++callbackRouter.setTheme.addListener(applyTheme);
+ handler.updateTheme();
+diff --git a/chrome/browser/resources/new_tab_page_third_party/orbit-mark.svg b/chrome/browser/resources/new_tab_page_third_party/orbit-mark.svg
+new file mode 100644
+--- /dev/null
++++ b/chrome/browser/resources/new_tab_page_third_party/orbit-mark.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" fill="none"><path d="M14 44 31 10l19 35M22 31h20M10 45c11 7 34 2 43-10M13 48c13 8 36 1 42-11" stroke="#78A8FF" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="52" cy="32" r="3.5" fill="#69D8F5"/></svg>
+diff --git a/chrome/browser/resources/new_tab_page_third_party/orbit.css b/chrome/browser/resources/new_tab_page_third_party/orbit.css
+new file mode 100644
+--- /dev/null
++++ b/chrome/browser/resources/new_tab_page_third_party/orbit.css
+@@ -0,0 +1,196 @@
++/* Trinol Orbit. Approved Phase 2A palette, typography and mark composition. */
++:root {
++  color-scheme: light;
++  --page: #fbfcfe;
++  --surface: #f2f5fa;
++  --text: #172234;
++  --muted: #526078;
++  --line: #cbd4e1;
++  --accent: #245dc2;
++  --wash: #dce8ff;
++  --cyan: #006781;
++  background-color: var(--page);
++  color: var(--text);
++  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
++}
++
++:root[dark] {
++  color-scheme: dark;
++  --page: #131820;
++  --surface: #191e27;
++  --text: #f4f6fa;
++  --muted: #a5b0c0;
++  --line: #303a49;
++  --accent: #86b1ff;
++  --wash: #233854;
++  --cyan: #69d8f5;
++}
++
++:root[custom-theme] { --muted: var(--text);
++ --accent: var(--text); }
++
++* { box-sizing: border-box; }
++
++body { margin: 0;
++ min-inline-size: 0; }
++
++main {
++  display: flex;
++  flex-direction: column;
++  justify-content: center;
++  margin-inline: auto;
++  max-inline-size: 1200px;
++  min-block-size: 100dvh;
++  padding: clamp(48px, 12vh, 120px) clamp(24px, 7vw, 96px) 32px;
++  position: relative;
++}
++
++.content { inline-size: 100%;
++ padding-block: 32px 80px;
++ position: relative; }
++
++.wordmark { align-items: center;
++ display: flex;
++ font-size: 30px;
++ font-weight: 600;
++ gap: 12px;
++ letter-spacing: -1.3px; }
++
++.orbit-mark { color: var(--accent);
++ block-size: 46px;
++ inline-size: 46px;
++ flex: none; }
++
++.orbit-mark circle { fill: var(--cyan); }
++
++h1 { font-size: clamp(40px, 5vw, 66px);
++ font-weight: 550;
++ letter-spacing: -.045em;
++ line-height: 1.1;
++ margin-block: 28px 32px;
++ overflow-wrap: anywhere; }
++
++#search {
++  align-items: center;
++  background: var(--surface);
++  border: 1px solid var(--line);
++  border-radius: 12px;
++  color: var(--muted);
++  cursor: pointer;
++  display: flex;
++  font: inherit;
++  gap: 16px;
++  inline-size: min(100%, 700px);
++  min-block-size: 60px;
++  padding: 16px 20px;
++  position: relative;
++  text-align: start;
++}
++
++#search svg { block-size: 22px;
++ color: var(--accent);
++ flex: none;
++ inline-size: 22px; }
++
++#search span { flex: 1;
++ min-inline-size: 0;
++ overflow-wrap: anywhere; }
++
++kbd { border: 1px solid var(--line);
++ border-radius: 4px;
++ flex: none;
++ font: inherit;
++ font-size: 12px;
++ padding: 2px 5px; }
++
++a { color: var(--accent);
++ text-underline-offset: 4px; }
++
++a:hover { text-decoration-thickness: 2px; }
++
++#search:hover { border-color: var(--accent); }
++
++a:focus-visible,
++ button:focus-visible { outline: 3px solid var(--accent);
++ outline-offset: 4px; }
++
++.hint,
++ .sites p { color: var(--muted);
++ font-size: 14px;
++ line-height: 1.6;
++ max-inline-size: 52ch; }
++
++.hint { margin-block: 16px 0; }
++
++#focus-status { color: var(--text);
++ font-size: 14px;
++ line-height: 1.6;
++ max-inline-size: 52ch; }
++
++#focus-status:empty { display: none; }
++
++.sites { border-block-start: 1px solid var(--line);
++ margin-block-start: 56px;
++ max-inline-size: 700px;
++ padding-block-start: 24px; }
++
++h2 { font-size: 15px;
++ font-weight: 600;
++ margin: 0; }
++
++.sites a { display: inline-block;
++ font-size: 14px;
++ padding-block: 8px; }
++
++footer { align-items: center;
++ color: var(--muted);
++ display: flex;
++ flex-wrap: wrap;
++ font-size: 13px;
++ gap: 24px;
++ justify-content: space-between;
++ margin-block-start: auto; }
++
++footer a { padding-block: 12px; }
++
++.orbit-art { color: var(--line);
++ fill: none;
++ inline-size: min(36vw, 360px);
++ inset-block-start: 13%;
++ inset-inline-end: 0;
++ opacity: .65;
++ pointer-events: none;
++ position: absolute;
++ stroke: currentColor;
++ stroke-width: .8; }
++
++.orbit-art circle { fill: var(--cyan);
++ stroke: none; }
++
++:root[custom-theme] .orbit-art { visibility: hidden; }
++@media (max-width: 600px) {
++  main { padding: 40px 24px 24px; }
++  .content { padding-block: 24px 48px; }
++  .orbit-art { display: none; }
++  #search { gap: 12px;
++ padding: 16px; }
++  kbd { display: none; }
++  .sites { margin-block-start: 40px; }
++}
++@media (forced-colors: active) {
++  :root,
++ :root[dark] { --page: Canvas !important;
++ --surface: Canvas !important;
++ --text: CanvasText !important;
++ --muted: CanvasText !important;
++ --line: CanvasText !important;
++ --accent: LinkText !important;
++ --cyan: LinkText !important; }
++  :root { background-image: none !important; }
++  .orbit-art { display: none; }
++}
++@media (prefers-reduced-motion: reduce) { *,
++ *::before,
++ *::after { animation: none !important;
++ transition: none !important;
++ scroll-behavior: auto !important; } }
+diff --git a/chrome/browser/search/search.cc b/chrome/browser/search/search.cc
+--- a/chrome/browser/search/search.cc
++++ b/chrome/browser/search/search.cc
+@@ -191,9 +191,10 @@
+       }
+     }
+ #else
+-    const GURL local_url(default_is_google
+-                             ? chrome::ChromeUINewTabPageURLAsGURL()
+-                             : GURL(chrome::kChromeUINewTabPageThirdPartyURL));
++    // Trinol uses the generic local WebUI for the default New Tab. Policy and
++    // extension overrides run before this handler; provider remote NTPs below
++    // retain their existing validation and precedence.
++    const GURL local_url(chrome::kChromeUINewTabPageThirdPartyURL);
+     if (default_is_google) {
+       return NewTabURLDetails(local_url, NEW_TAB_URL_VALID);
+     }
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/BUILD.gn b/chrome/browser/ui/webui/new_tab_page_third_party/BUILD.gn
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/BUILD.gn
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/BUILD.gn
+@@ -10,10 +10,7 @@
+ mojom("mojo_bindings") {
+   sources = [ "new_tab_page_third_party.mojom" ]
+   webui_module_path = "/"
+-  public_deps = [
+-    "//skia/public/mojom",
+-    "//ui/webui/resources/cr_components/most_visited:mojom",
+-  ]
++  public_deps = [ "//skia/public/mojom" ]
+ }
+ 
+ # The New Tab Page Third Party WebUI (other than its mojom bindings) is
+@@ -50,19 +47,20 @@
+       "//chrome/browser/profiles:profile",
+       "//chrome/browser/resources/new_tab_page_third_party:resources",
+       "//chrome/browser/themes",
++      "//chrome/browser/ui:browser_window_header",
++      "//chrome/browser/ui/browser_window",
+       "//chrome/browser/ui/color:color_headers",
+-      "//chrome/browser/ui/search",
+-      "//chrome/browser/ui/webui:favicon_source",
+       "//chrome/browser/ui/webui:theme_source",
+-      "//chrome/browser/ui/webui/cr_components/most_visited",
++      "//chrome/browser/ui/webui:webui_util",
+       "//chrome/browser/ui/webui/ntp:ntp_resource_cache",
+       "//chrome/browser/ui/webui/page_not_available_for_guest",
+       "//chrome/browser/ui/webui/util",
+       "//chrome/common",
+-      "//components/favicon_base",
+       "//components/prefs",
+       "//components/search",
+       "//content/public/browser",
++      "//services/network/public/mojom",
++      "//trinol/new_tab:strings",
+       "//ui/color",
+       "//ui/gfx:color_utils",
+       "//ui/native_theme",
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom
+@@ -5,44 +5,30 @@
+ module new_tab_page_third_party.mojom;
+ 
+ import "skia/public/mojom/skcolor.mojom";
+-import "ui/webui/resources/cr_components/most_visited/most_visited.mojom";
+ 
+-// A generic theme.
+ struct Theme {
+   skia.mojom.SkColor text_color;
+-  // True if the theme is dark (e.g. NTP background color is dark).
+   bool is_dark;
+-  // Used to show the theme extension background if one is set.
+   string id;
+-  // Theme color ready to be set in CSS.
+   string color_background;
+-  // The theme extension can set image tiling. This is ready to be set in CSS.
+   string background_tiling;
+-  // Position CSS of background image.
+   string background_position;
+-  // True if custom background is set.
+   bool has_custom_background;
+-
+-  // Theme settings for the NTP MV tiles.
+-  most_visited.mojom.MostVisitedTheme most_visited;
++  bool use_orbit_colors;
+ };
+ 
+-// Used by the WebUI page to bootstrap bidirectional communication.
+ interface PageHandlerFactory {
+-  // The WebUI page's |BrowserProxy| singleton calls this method when the page
+-  // is first initialized.
+   CreatePageHandler(pending_remote<Page> page,
+                     pending_receiver<PageHandler> handler);
+ };
+ 
+-// Browser-side handler for requests from WebUI page.
+ interface PageHandler {
+-  // Called to update the theme.
+   UpdateTheme();
++  // Focus only this visible, user-activated page's native browser omnibox.
++  // No query, URL, command identifier or cross-profile target is accepted.
++  FocusOmnibox() => (bool focused);
+ };
+ 
+-// WebUI-side handler for requests from the browser.
+ interface Page {
+-  // Sets the current theme.
+   SetTheme(Theme theme);
+ };
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.cc b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.cc
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.cc
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.cc
+@@ -9,13 +9,19 @@
+ #include "chrome/browser/themes/theme_properties.h"
+ #include "chrome/browser/themes/theme_service.h"
+ #include "chrome/browser/themes/theme_service_factory.h"
++#include "chrome/browser/ui/browser_window.h"
++#include "chrome/browser/ui/browser_window/public/browser_window_interface.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
++#include "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h"
+ #include "chrome/browser/ui/webui/ntp/ntp_resource_cache.h"
+ #include "chrome/browser/ui/webui/util/webui_util_desktop.h"
++#include "chrome/browser/ui/webui/webui_embedding_context.h"
+ #include "chrome/common/pref_names.h"
+ #include "chrome/grit/theme_resources.h"
+ #include "components/prefs/pref_service.h"
+ #include "components/search/ntp_features.h"
++#include "content/public/browser/render_frame_host.h"
++#include "content/public/browser/visibility.h"
+ #include "content/public/browser/web_contents.h"
+ #include "ui/color/color_provider.h"
+ #include "ui/gfx/color_utils.h"
+@@ -26,7 +32,8 @@
+     mojo::PendingRemote<new_tab_page_third_party::mojom::Page> pending_page,
+     Profile* profile,
+     content::WebContents* web_contents)
+-    : profile_(profile),
++    : content::WebContentsObserver(web_contents),
++      profile_(profile),
+       web_contents_(web_contents),
+       page_{std::move(pending_page)},
+       receiver_{this, std::move(pending_page_handler)} {
+@@ -46,24 +53,21 @@
+   NotifyAboutTheme();
+ }
+ 
+-void NewTabPageThirdPartyHandler::OnNativeThemeUpdated(
+-    ui::NativeTheme* observed_theme) {
++void NewTabPageThirdPartyHandler::OnColorProviderChanged() {
+   NotifyAboutTheme();
+ }
+ 
+ void NewTabPageThirdPartyHandler::NotifyAboutTheme() {
+   auto theme = new_tab_page_third_party::mojom::Theme::New();
+-  auto most_visited = most_visited::mojom::MostVisitedTheme::New();
+   const ui::ThemeProvider* theme_provider =
+       webui::GetThemeProviderDeprecated(web_contents_);
+   DCHECK(theme_provider);
+   const ui::ColorProvider& color_provider = web_contents_->GetColorProvider();
+-  most_visited->background_color =
+-      color_provider.GetColor(kColorNewTabPageMostVisitedTileBackground);
+-  most_visited->use_white_tile_icon =
+-      color_utils::IsDark(most_visited->background_color);
+   theme->text_color = color_provider.GetColor(kColorNewTabPageText);
+-  most_visited->is_dark = !color_utils::IsDark(theme->text_color);
++  theme->is_dark =
++      color_utils::IsDark(color_provider.GetColor(kColorNewTabPageBackground));
++  theme->use_orbit_colors =
++      ThemeServiceFactory::GetForProfile(profile_)->UsingDefaultTheme();
+   theme->color_background = color_utils::SkColorToRgbaString(GetThemeColor(
+       webui::GetNativeThemeDeprecated(web_contents_),
+       web_contents_->GetColorProvider(), kColorNewTabPageBackground));
+@@ -75,6 +79,23 @@
+         theme_provider->HasCustomImage(IDR_THEME_NTP_BACKGROUND);
+     theme->id = profile_->GetPrefs()->GetString(prefs::kCurrentThemeID);
+   }
+-  theme->most_visited = std::move(most_visited);
+   page_->SetTheme(std::move(theme));
+ }
++
++void NewTabPageThirdPartyHandler::FocusOmnibox(FocusOmniboxCallback callback) {
++  auto* browser = webui::GetBrowserWindowInterface(web_contents_);
++  auto* window = browser ? BrowserWindow::FromBrowser(browser) : nullptr;
++  auto* frame = web_contents_->GetPrimaryMainFrame();
++  const bool allowed =
++      !profile_->IsOffTheRecord() && !profile_->IsGuestSession() &&
++      web_contents_->GetBrowserContext() == profile_ && browser && window &&
++      browser->GetProfile() == profile_ &&
++      NewTabPageThirdPartyUI::IsNewTabPageOrigin(
++          web_contents_->GetLastCommittedURL()) &&
++      web_contents_->GetVisibility() == content::Visibility::VISIBLE && frame &&
++      frame->HasTransientUserActivation();
++  if (allowed) {
++    window->SetFocusToLocationBar(true);
++  }
++  std::move(callback).Run(allowed);
++}
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h
+@@ -14,8 +14,6 @@
+ #include "mojo/public/cpp/bindings/pending_remote.h"
+ #include "mojo/public/cpp/bindings/receiver.h"
+ #include "mojo/public/cpp/bindings/remote.h"
+-#include "ui/native_theme/native_theme.h"
+-#include "ui/native_theme/native_theme_observer.h"
+ 
+ class Profile;
+ 
+@@ -26,7 +24,7 @@
+ class NewTabPageThirdPartyHandler
+     : public new_tab_page_third_party::mojom::PageHandler,
+       public ThemeServiceObserver,
+-      public ui::NativeThemeObserver {
++      public content::WebContentsObserver {
+  public:
+   NewTabPageThirdPartyHandler(
+       mojo::PendingReceiver<new_tab_page_third_party::mojom::PageHandler>
+@@ -43,13 +41,14 @@
+ 
+   // new_tab_page_third_party::mojom::PageHandler:
+   void UpdateTheme() override;
++  void FocusOmnibox(FocusOmniboxCallback callback) override;
+ 
+  private:
+   // ThemeServiceObserver:
+   void OnThemeChanged() override;
+ 
+-  // ui::NativeThemeObserver:
+-  void OnNativeThemeUpdated(ui::NativeTheme* observed_theme) override;
++  // content::WebContentsObserver:
++  void OnColorProviderChanged() override;
+ 
+   void NotifyAboutTheme();
+ 
+@@ -60,8 +59,6 @@
+   // WebUI page is disconnected before other members are destroyed.
+   mojo::Remote<new_tab_page_third_party::mojom::Page> page_;
+   mojo::Receiver<new_tab_page_third_party::mojom::PageHandler> receiver_;
+-
+-  base::WeakPtrFactory<NewTabPageThirdPartyHandler> weak_ptr_factory_{this};
+ };
+ 
+ #endif  // CHROME_BROWSER_UI_WEBUI_NEW_TAB_PAGE_THIRD_PARTY_NEW_TAB_PAGE_THIRD_PARTY_HANDLER_H_
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.cc b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.cc
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.cc
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.cc
+@@ -7,181 +7,95 @@
+ #include <memory>
+ #include <utility>
+ 
+-#include "chrome/browser/browser_features.h"
+ #include "chrome/browser/profiles/profile.h"
+-#include "chrome/browser/themes/theme_properties.h"
+-#include "chrome/browser/themes/theme_service.h"
+ #include "chrome/browser/ui/color/chrome_color_id.h"
+-#include "chrome/browser/ui/search/ntp_user_data_logger.h"
+-#include "chrome/browser/ui/webui/cr_components/most_visited/most_visited_handler.h"
+-#include "chrome/browser/ui/webui/favicon_source.h"
+ #include "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h"
+-#include "chrome/browser/ui/webui/ntp/ntp_resource_cache.h"
+ #include "chrome/browser/ui/webui/page_not_available_for_guest/page_not_available_for_guest_ui.h"
+ #include "chrome/browser/ui/webui/theme_source.h"
+-#include "chrome/browser/ui/webui/util/webui_util_desktop.h"
+-#include "chrome/common/pref_names.h"
+-#include "chrome/common/url_constants.h"
+-#include "chrome/common/webui_url_constants.h"
+-#include "chrome/grit/generated_resources.h"
+ #include "chrome/grit/new_tab_page_third_party_resources.h"
+ #include "chrome/grit/new_tab_page_third_party_resources_map.h"
+-#include "chrome/grit/theme_resources.h"
+-#include "components/favicon_base/favicon_url_parser.h"
+-#include "components/prefs/pref_service.h"
+-#include "components/search/ntp_features.h"
+-#include "components/strings/grit/components_strings.h"
++#include "content/public/browser/url_data_source.h"
+ #include "content/public/browser/web_contents.h"
++#include "content/public/browser/web_ui.h"
+ #include "content/public/browser/web_ui_data_source.h"
++#include "services/network/public/mojom/content_security_policy.mojom.h"
++#include "trinol/new_tab/grit/trinol_new_tab_strings.h"
+ #include "ui/base/accelerators/accelerator.h"
+-#include "ui/base/l10n/l10n_util.h"
+ #include "ui/color/color_provider.h"
+ #include "ui/gfx/color_utils.h"
+ #include "ui/webui/webui_util.h"
+-#include "url/url_util.h"
+-
+-using content::BrowserContext;
+-using content::WebContents;
+ 
+ bool NewTabPageThirdPartyUIConfig::IsWebUIEnabled(
+     content::BrowserContext* browser_context) {
+-  Profile* profile = Profile::FromBrowserContext(browser_context);
+-  return !profile->IsOffTheRecord();
++  return !Profile::FromBrowserContext(browser_context)->IsOffTheRecord();
+ }
+ 
+ std::unique_ptr<content::WebUIController>
+ NewTabPageThirdPartyUIConfig::CreateWebUIController(content::WebUI* web_ui,
+                                                     const GURL& url) {
+-  Profile* profile = Profile::FromWebUI(web_ui);
+-  if (profile->IsGuestSession()) {
++  if (Profile::FromWebUI(web_ui)->IsGuestSession()) {
+     return std::make_unique<PageNotAvailableForGuestUI>(
+         web_ui, chrome::kChromeUINewTabPageThirdPartyHost);
+   }
+   return std::make_unique<NewTabPageThirdPartyUI>(web_ui);
+ }
+ 
+-namespace {
+-void CreateAndAddNewTabPageThirdPartyUiHtmlSource(Profile* profile,
+-                                                  WebContents* web_contents) {
+-  content::WebUIDataSource* source = content::WebUIDataSource::CreateAndAdd(
++NewTabPageThirdPartyUI::NewTabPageThirdPartyUI(content::WebUI* web_ui)
++    : ui::MojoWebUIController(web_ui, /*enable_chrome_send=*/false),
++      page_factory_receiver_(this) {
++  Profile* profile = Profile::FromWebUI(web_ui);
++  auto* source = content::WebUIDataSource::CreateAndAdd(
+       profile, chrome::kChromeUINewTabPageThirdPartyHost);
+-  ui::Accelerator undo_accelerator(ui::VKEY_Z, ui::EF_PLATFORM_ACCELERATOR);
+-  source->AddString("undoDescription", l10n_util::GetStringFUTF16(
+-                                           IDS_UNDO_DESCRIPTION,
+-                                           undo_accelerator.GetShortcutText()));
+   static constexpr webui::LocalizedString kStrings[] = {
+-      {"linkRemove", IDS_NTP_CUSTOM_LINKS_REMOVE},
+-      {"linkRemoveA11y", IDS_NTP_MOST_VISITED_SITES_REMOVE},
+-      {"linkRemovedMsg", IDS_NTP_CONFIRM_MSG_SHORTCUT_REMOVED},
+-      {"restoreThumbnailsShort", IDS_NEW_TAB_RESTORE_THUMBNAILS_SHORT_LINK},
+-      {"title", IDS_NEW_TAB_TITLE},
+-      {"undo", IDS_NEW_TAB_UNDO_THUMBNAIL_REMOVE},
+-      {"showMore", IDS_NTP_SHOW_MORE_BUTTON_LABEL},
+-      {"showLess", IDS_NTP_SHOW_LESS_BUTTON_LABEL},
+-      {"shortcutsInactivityRemovalMsg",
+-       IDS_NTP_MOST_VISITED_SHORTCUTS_INACTIVITY_REMOVAL},
+-      {"moduleInactivityRemovalMsg", IDS_NTP_MODULE_INACTIVITY_REMOVAL},
+-      {"modulesInactivityRemovalMsg", IDS_NTP_MODULES_INACTIVITY_REMOVAL},
++      {"title", IDS_TRINOL_NEW_TAB_TITLE},
++      {"headline", IDS_TRINOL_NEW_TAB_HEADLINE},
++      {"searchAction", IDS_TRINOL_NEW_TAB_SEARCH},
++      {"searchHint", IDS_TRINOL_NEW_TAB_SEARCH_HINT},
++      {"sitesHeading", IDS_TRINOL_NEW_TAB_SITES},
++      {"sitesUnavailable", IDS_TRINOL_NEW_TAB_SITES_UNAVAILABLE},
++      {"historyAction", IDS_TRINOL_NEW_TAB_HISTORY},
++      {"appearanceAction", IDS_TRINOL_NEW_TAB_APPEARANCE},
++      {"focusUnavailable", IDS_TRINOL_NEW_TAB_FOCUS_UNAVAILABLE},
+   };
+-
+   source->AddLocalizedStrings(kStrings);
+-
+-  const ui::ThemeProvider* theme_provider =
+-      webui::GetThemeProviderDeprecated(web_contents);
+-  // TODO(crbug.com/40823895): Always mock theme provider in tests so that
+-  // `theme_provider` is never nullptr.
+-  if (theme_provider) {
+-    const ui::ColorProvider& color_provider = web_contents->GetColorProvider();
+-    source->AddString("backgroundPosition",
+-                      GetNewTabBackgroundPositionCSS(*theme_provider));
+-    source->AddString("backgroundTiling",
+-                      GetNewTabBackgroundTilingCSS(*theme_provider));
+-    source->AddString("colorBackground",
+-                      color_utils::SkColorToRgbaString(GetThemeColor(
+-                          webui::GetNativeThemeDeprecated(web_contents),
+-                          color_provider, kColorNewTabPageBackground)));
+-    // TODO(crbug.com/40120448): don't get theme id from profile.
+-    source->AddString("themeId",
+-                      profile->GetPrefs()->GetString(prefs::kCurrentThemeID));
+-    source->AddString("hascustombackground",
+-                      theme_provider->HasCustomImage(IDR_THEME_NTP_BACKGROUND)
+-                          ? "has-custom-background"
+-                          : "");
+-    source->AddString(
+-        "isdark",
+-        !color_utils::IsDark(color_provider.GetColor(kColorNewTabPageText))
+-            ? "dark"
+-            : "");
+-  } else {
+-    source->AddString("backgroundPosition", "");
+-    source->AddString("backgroundTiling", "");
+-    source->AddString("colorBackground", "");
+-    source->AddString("themeId", "");
+-    source->AddString("hascustombackground", "");
+-    source->AddString("isdark", "");
+-  }
+-
+-  source->AddInteger(
+-      "preconnectStartTimeThreshold",
+-      features::kNewTabPagePreconnectStartDelayOnMouseHoverByMilliSeconds
+-          .Get());
+-  source->AddInteger(
+-      "prefetchStartTimeThreshold",
+-      features::kNewTabPagePrefetchStartDelayOnMouseHoverByMilliSeconds.Get());
+-  source->AddBoolean(
+-      "prefetchTriggerEnabled",
+-      base::FeatureList::IsEnabled(features::kNewTabPageTriggerForPrefetch));
+-  source->AddBoolean(
+-      "prerenderOnPressEnabled",
+-      base::FeatureList::IsEnabled(features::kNewTabPageTriggerForPrerender2));
+-  source->AddBoolean("mostVisitedHighDpiFaviconsEnabled",
+-                     base::FeatureList::IsEnabled(
+-                         ntp_features::kNtpMostVisitedHighDpiFavicons));
+-
+-  // Needed by <cr-most-visited> but not used in
+-  // chrome://new-tab-page-third-party/.
+-  source->AddString("addLinkTitle", "");
+-  source->AddString("editLinkTitle", "");
+-  source->AddString("invalidUrl", "");
+-  source->AddString("linkAddedMsg", "");
+-  source->AddString("linkCancel", "");
+-  source->AddString("linkCantCreate", "");
+-  source->AddString("linkCantEdit", "");
+-  source->AddString("linkDone", "");
+-  source->AddString("linkEditedMsg", "");
+-  source->AddString("shortcutMoreActions", "");
+-  source->AddString("nameField", "");
+-  source->AddString("restoreDefaultLinks", "");
+-  source->AddString("shortcutAlreadyExists", "");
+-  source->AddString("urlField", "");
+-
++  source->AddString("omniboxShortcut",
++                    ui::Accelerator(ui::VKEY_L, ui::EF_PLATFORM_ACCELERATOR)
++                        .GetShortcutText());
++  source->AddString(
++      "isdark",
++      color_utils::IsDark(web_ui->GetWebContents()->GetColorProvider().GetColor(
++          kColorNewTabPageBackground))
++          ? "dark"
++          : "");
+   webui::SetupWebUIDataSource(
+       source, kNewTabPageThirdPartyResources,
+       IDR_NEW_TAB_PAGE_THIRD_PARTY_NEW_TAB_PAGE_THIRD_PARTY_HTML);
+-}
+-}  // namespace
+-
+-NewTabPageThirdPartyUI::NewTabPageThirdPartyUI(content::WebUI* web_ui)
+-    : ui::MojoWebUIController(web_ui, /*enable_chrome_send=*/false),
+-      page_factory_receiver_(this),
+-      most_visited_page_factory_receiver_(this),
+-      profile_(Profile::FromWebUI(web_ui)),
+-      web_contents_(web_ui->GetWebContents()),
+-      navigation_start_time_(base::Time::Now()),
+-      navigation_start_time_ticks_(base::TimeTicks::Now()) {
+-  CreateAndAddNewTabPageThirdPartyUiHtmlSource(profile_, web_contents_);
+-  content::URLDataSource::Add(
+-      profile_, std::make_unique<FaviconSource>(
+-                    profile_, chrome::FaviconUrlFormat::kFavicon2));
+-  content::URLDataSource::Add(profile_,
+-                              std::make_unique<ThemeSource>(profile_));
++  using Directive = network::mojom::CSPDirectiveName;
++  source->OverrideContentSecurityPolicy(Directive::DefaultSrc,
++                                        "default-src 'none';");
++  source->OverrideContentSecurityPolicy(
++      Directive::ScriptSrc, "script-src 'self' chrome://resources;");
++  source->OverrideContentSecurityPolicy(Directive::StyleSrc,
++                                        "style-src 'self' chrome://resources;");
++  source->OverrideContentSecurityPolicy(Directive::ImgSrc,
++                                        "img-src 'self' chrome://theme;");
++  source->OverrideContentSecurityPolicy(Directive::ConnectSrc,
++                                        "connect-src 'none';");
++  source->OverrideContentSecurityPolicy(Directive::ChildSrc,
++                                        "child-src 'none';");
++  source->OverrideContentSecurityPolicy(Directive::FrameSrc,
++                                        "frame-src 'none';");
++  source->OverrideContentSecurityPolicy(Directive::ObjectSrc,
++                                        "object-src 'none';");
++  source->OverrideContentSecurityPolicy(Directive::BaseURI, "base-uri 'none';");
++  source->OverrideContentSecurityPolicy(Directive::FormAction,
++                                        "form-action 'none';");
++  content::URLDataSource::Add(profile, std::make_unique<ThemeSource>(profile));
+ }
+ 
++NewTabPageThirdPartyUI::~NewTabPageThirdPartyUI() = default;
+ WEB_UI_CONTROLLER_TYPE_IMPL(NewTabPageThirdPartyUI)
+ 
+-NewTabPageThirdPartyUI::~NewTabPageThirdPartyUI() = default;
+-
+-// static
+ bool NewTabPageThirdPartyUI::IsNewTabPageOrigin(const GURL& url) {
+   return url.DeprecatedGetOriginAsURL() ==
+          GURL(chrome::kChromeUINewTabPageThirdPartyURL)
+@@ -191,48 +105,18 @@
+ void NewTabPageThirdPartyUI::BindInterface(
+     mojo::PendingReceiver<new_tab_page_third_party::mojom::PageHandlerFactory>
+         pending_receiver) {
+-  if (page_factory_receiver_.is_bound()) {
+-    page_factory_receiver_.reset();
+-  }
+-
++  page_factory_receiver_.reset();
+   page_factory_receiver_.Bind(std::move(pending_receiver));
+-}
+-
+-void NewTabPageThirdPartyUI::BindInterface(
+-    mojo::PendingReceiver<most_visited::mojom::MostVisitedPageHandlerFactory>
+-        pending_receiver) {
+-  if (most_visited_page_factory_receiver_.is_bound()) {
+-    most_visited_page_factory_receiver_.reset();
+-  }
+-
+-  most_visited_page_factory_receiver_.Bind(std::move(pending_receiver));
+ }
+ 
+ void NewTabPageThirdPartyUI::CreatePageHandler(
+     mojo::PendingRemote<new_tab_page_third_party::mojom::Page> pending_page,
+     mojo::PendingReceiver<new_tab_page_third_party::mojom::PageHandler>
+         pending_page_handler) {
+-  DCHECK(pending_page.is_valid());
+-
++  if (!pending_page.is_valid() || !pending_page_handler.is_valid()) {
++    return;
++  }
+   page_handler_ = std::make_unique<NewTabPageThirdPartyHandler>(
+-      std::move(pending_page_handler), std::move(pending_page), profile_,
+-      web_contents_);
++      std::move(pending_page_handler), std::move(pending_page),
++      Profile::FromWebUI(web_ui()), web_ui()->GetWebContents());
+ }
+-
+-void NewTabPageThirdPartyUI::CreatePageHandler(
+-    mojo::PendingRemote<most_visited::mojom::MostVisitedPage> pending_page,
+-    mojo::PendingReceiver<most_visited::mojom::MostVisitedPageHandler>
+-        pending_page_handler) {
+-  DCHECK(pending_page.is_valid());
+-
+-  most_visited_page_handler_ = std::make_unique<MostVisitedHandler>(
+-      std::move(pending_page_handler), std::move(pending_page), profile_,
+-      web_contents_,
+-      std::make_unique<NTPUserDataLogger>(
+-          profile_, GURL(chrome::kChromeUINewTabPageThirdPartyURL),
+-          navigation_start_time_ticks_),
+-      navigation_start_time_);
+-  most_visited_page_handler_->EnableTileTypes(
+-      ntp_tiles::MostVisitedSites::EnableTileTypesOptions().with_top_sites(
+-          true));
+-}
+diff --git a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h
+--- a/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h
++++ b/chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h
+@@ -7,28 +7,15 @@
+ 
+ #include <memory>
+ 
+-#include "base/memory/raw_ptr.h"
+-#include "base/time/time.h"
+ #include "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party.mojom.h"
+ #include "chrome/common/webui_url_constants.h"
+-#include "content/public/browser/web_contents_observer.h"
+ #include "content/public/browser/webui_config.h"
+ #include "content/public/common/url_constants.h"
+-#include "mojo/public/cpp/bindings/pending_receiver.h"
+-#include "mojo/public/cpp/bindings/pending_remote.h"
+ #include "mojo/public/cpp/bindings/receiver.h"
+ #include "ui/webui/mojo_web_ui_controller.h"
+-#include "ui/webui/resources/cr_components/most_visited/most_visited.mojom.h"
+-
+-namespace content {
+-class WebContents;
+-class WebUI;
+-}  // namespace content
+ 
+ class GURL;
+-class MostVisitedHandler;
+ class NewTabPageThirdPartyHandler;
+-class Profile;
+ class NewTabPageThirdPartyUI;
+ 
+ class NewTabPageThirdPartyUIConfig
+@@ -38,7 +25,6 @@
+       : DefaultWebUIConfig(content::kChromeUIScheme,
+                            chrome::kChromeUINewTabPageThirdPartyHost) {}
+ 
+-  // content::WebUIConfig:
+   std::unique_ptr<content::WebUIController> CreateWebUIController(
+       content::WebUI* web_ui,
+       const GURL& url) override;
+@@ -47,57 +33,28 @@
+ 
+ class NewTabPageThirdPartyUI
+     : public ui::MojoWebUIController,
+-      public new_tab_page_third_party::mojom::PageHandlerFactory,
+-      public most_visited::mojom::MostVisitedPageHandlerFactory {
++      public new_tab_page_third_party::mojom::PageHandlerFactory {
+  public:
+   explicit NewTabPageThirdPartyUI(content::WebUI* web_ui);
++  ~NewTabPageThirdPartyUI() override;
+ 
+   NewTabPageThirdPartyUI(const NewTabPageThirdPartyUI&) = delete;
+   NewTabPageThirdPartyUI& operator=(const NewTabPageThirdPartyUI&) = delete;
+ 
+-  ~NewTabPageThirdPartyUI() override;
+-
+   static bool IsNewTabPageOrigin(const GURL& url);
+-
+-  // Instantiates the implementor of the mojom::PageHandlerFactory mojo
+-  // interface passing the pending receiver that will be internally bound.
+   void BindInterface(
+       mojo::PendingReceiver<new_tab_page_third_party::mojom::PageHandlerFactory>
+           pending_receiver);
+ 
+-  // Instantiates the implementor of the
+-  // most_visited::mojom::MostVisitedPageHandlerFactory mojo interface passing
+-  // the pending receiver that will be internally bound.
+-  void BindInterface(
+-      mojo::PendingReceiver<most_visited::mojom::MostVisitedPageHandlerFactory>
+-          pending_receiver);
+-
+  private:
+-  // new_tab_page::mojom::PageHandlerFactory:
+   void CreatePageHandler(
+       mojo::PendingRemote<new_tab_page_third_party::mojom::Page> pending_page,
+       mojo::PendingReceiver<new_tab_page_third_party::mojom::PageHandler>
+           pending_page_handler) override;
+ 
+-  // most_visited::mojom::MostVisitedPageHandlerFactory:
+-  void CreatePageHandler(
+-      mojo::PendingRemote<most_visited::mojom::MostVisitedPage> pending_page,
+-      mojo::PendingReceiver<most_visited::mojom::MostVisitedPageHandler>
+-          pending_page_handler) override;
+-
+   std::unique_ptr<NewTabPageThirdPartyHandler> page_handler_;
+   mojo::Receiver<new_tab_page_third_party::mojom::PageHandlerFactory>
+       page_factory_receiver_;
+-  std::unique_ptr<MostVisitedHandler> most_visited_page_handler_;
+-  mojo::Receiver<most_visited::mojom::MostVisitedPageHandlerFactory>
+-      most_visited_page_factory_receiver_;
+-  raw_ptr<Profile> profile_;
+-  raw_ptr<content::WebContents> web_contents_;
+-  // Time the NTP started loading. Used for logging the WebUI NTP's load
+-  // performance.
+-  base::Time navigation_start_time_;
+-  base::TimeTicks navigation_start_time_ticks_;
+-
+   WEB_UI_CONTROLLER_TYPE_DECL();
+ };
+ 
+diff --git a/chrome/chrome_repack_locales.gni b/chrome/chrome_repack_locales.gni
+--- a/chrome/chrome_repack_locales.gni
++++ b/chrome/chrome_repack_locales.gni
+@@ -6,6 +6,7 @@
+ import("//build/config/ui.gni")
+ import("//extensions/buildflags/buildflags.gni")
+ import("//tools/grit/repack.gni")
++import("//ui/webui/webui_features.gni")
+ 
+ assert(!is_ios, "Chromium/iOS shouldn't use anything in //chrome")
+ 
+@@ -106,6 +107,11 @@
+           [ "${root_gen_dir}/chrome/browser/indigo/resources/indigo_strings_" ]
+       deps += [ "//chrome/browser/indigo/resources:indigo_strings" ]
+     }
++    if (!is_android && enable_webui_ntp) {
++      source_patterns +=
++          [ "${root_gen_dir}/trinol/new_tab/trinol_new_tab_strings_" ]
++      deps += [ "//trinol/new_tab:strings" ]
++    }
+     if (enable_builtin_search_provider_assets && !is_android) {
+       source_patterns += [ "${root_gen_dir}/third_party/search_engines_data/search_engine_descriptions_strings_" ]
+       deps += [
+diff --git a/chrome/test/data/webui/BUILD.gn b/chrome/test/data/webui/BUILD.gn
+--- a/chrome/test/data/webui/BUILD.gn
++++ b/chrome/test/data/webui/BUILD.gn
+@@ -57,7 +57,12 @@
+   ]
+ 
+   if (!is_android) {
+-    deps += [ "//chrome/browser/ui/webui/net_internals:test_support" ]
++    deps += [
++      "//chrome/browser/resources/new_tab_page_third_party:resources",
++      "//chrome/browser/ui/webui/net_internals:test_support",
++      "//chrome/browser/ui/webui/new_tab_page_third_party",
++      "//chrome/browser/ui/webui/new_tab_page_third_party:impl",
++    ]
+   }
+ 
+   if (enable_webui_ntp) {
+@@ -101,6 +106,7 @@
+       "net_internals/net_internals_browsertest.cc",
+       "new_tab_footer/new_tab_footer_browsertest.cc",
+       "new_tab_page/new_tab_page_browsertest.cc",
++      "new_tab_page_third_party/orbit_browsertest.cc",
+       "new_tab_shared/new_tab_shared_browsertest.cc",
+       "omnibox_popup/omnibox_popup_browsertest.cc",
+       "optimization_guide_internals/optimization_guide_internals_browsertest.cc",
+@@ -657,10 +663,12 @@
+     deps += [
+       "cr_components/searchbox:build_grdp",
+       "new_tab_page:build_grdp",
++      "new_tab_page_third_party:build_grdp",
+     ]
+     grdp_files += [
+       "$target_gen_dir/cr_components/searchbox/resources.grdp",
+       "$target_gen_dir/new_tab_page/resources.grdp",
++      "$target_gen_dir/new_tab_page_third_party/resources.grdp",
+     ]
+   }
+ 
+diff --git a/chrome/test/data/webui/new_tab_page_third_party/BUILD.gn b/chrome/test/data/webui/new_tab_page_third_party/BUILD.gn
+new file mode 100644
+--- /dev/null
++++ b/chrome/test/data/webui/new_tab_page_third_party/BUILD.gn
+@@ -0,0 +1,13 @@
++import("../build_webui_tests.gni")
++
++build_webui_tests("build") {
++  files = [ "orbit_test.ts" ]
++  cc_test_files = [ "orbit_browsertest.cc" ]
++  ts_deps = [
++    "//chrome/browser/resources/new_tab_page_third_party:build_ts",
++    "//ui/webui/resources/js:build_ts",
++  ]
++  ts_path_mappings = [ "chrome://webui-test/orbit-production/*|" + rebase_path(
++                           "$root_gen_dir/chrome/browser/resources/new_tab_page_third_party/tsc/*",
++                           target_gen_dir) ]
++}
+diff --git a/chrome/test/data/webui/new_tab_page_third_party/orbit_browsertest.cc b/chrome/test/data/webui/new_tab_page_third_party/orbit_browsertest.cc
+new file mode 100644
+--- /dev/null
++++ b/chrome/test/data/webui/new_tab_page_third_party/orbit_browsertest.cc
+@@ -0,0 +1,79 @@
++#include <memory>
++#include <string>
++#include <utility>
++
++#include "base/functional/bind.h"
++#include "chrome/browser/profiles/profile.h"
++#include "chrome/browser/search/search.h"
++#include "chrome/browser/search_engines/template_url_service_factory.h"
++#include "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_handler.h"
++#include "chrome/browser/ui/webui/new_tab_page_third_party/new_tab_page_third_party_ui.h"
++#include "chrome/common/webui_url_constants.h"
++#include "chrome/grit/new_tab_page_third_party_resources_map.h"
++#include "chrome/test/base/chrome_test_utils.h"
++#include "chrome/test/base/search_test_utils.h"
++#include "chrome/test/base/web_ui_mocha_browser_test.h"
++#include "chrome/test/base/web_ui_test_data_source.h"
++#include "components/search_engines/template_url.h"
++#include "components/search_engines/template_url_service.h"
++#include "content/public/test/browser_test.h"
++
++class TrinolNewTabBrowserTest : public WebUIMochaBrowserTest {
++ protected:
++  void SetUpOnMainThread() override {
++    WebUIMochaBrowserTest::SetUpOnMainThread();
++    auto* source = webui::CreateAndAddWebUITestDataSource(
++        chrome_test_utils::GetProfile(this));
++    // Alias the actual compiled modules only in the test data source.
++    for (const auto& resource : kNewTabPageThirdPartyResources) {
++      source->AddResourcePath(std::string("orbit-production/") + resource.path,
++                              resource.id);
++    }
++  }
++};
++
++IN_PROC_BROWSER_TEST_F(TrinolNewTabBrowserTest, ClientBehavior) {
++  RunTest("new_tab_page_third_party/orbit_test.js", "mocha.run()");
++}
++
++IN_PROC_BROWSER_TEST_F(TrinolNewTabBrowserTest,
++                       LocalRouteAndOffRecordExclusion) {
++  Profile* profile = chrome_test_utils::GetProfile(this);
++  EXPECT_EQ(GURL(chrome::kChromeUINewTabPageThirdPartyURL),
++            search::GetNewTabPageURL(profile));
++  Profile* otr = profile->GetPrimaryOTRProfile(/*create_if_needed=*/true);
++  EXPECT_EQ(GURL(), search::GetNewTabPageURL(otr));
++  NewTabPageThirdPartyUIConfig config;
++  EXPECT_FALSE(config.IsWebUIEnabled(otr));
++}
++
++IN_PROC_BROWSER_TEST_F(TrinolNewTabBrowserTest,
++                       ConfiguredProviderRemoteNtpPreserved) {
++  auto* service = TemplateURLServiceFactory::GetForProfile(
++      chrome_test_utils::GetProfile(this));
++  search_test_utils::WaitForTemplateURLServiceToLoad(service);
++  TemplateURLData data;
++  data.SetShortName(u"Test provider");
++  data.SetKeyword(u"provider.test");
++  data.SetURL("https://provider.test/search?q={searchTerms}");
++  data.new_tab_url = "https://provider.test/newtab";
++  auto* provider = service->Add(std::make_unique<TemplateURL>(data));
++  service->SetUserSelectedDefaultSearchProvider(provider);
++  EXPECT_EQ(GURL(data.new_tab_url),
++            search::GetNewTabPageURL(chrome_test_utils::GetProfile(this)));
++  EXPECT_EQ(provider, service->GetDefaultSearchProvider());
++}
++
++IN_PROC_BROWSER_TEST_F(TrinolNewTabBrowserTest, FocusWithoutUserGestureDenied) {
++  mojo::Remote<new_tab_page_third_party::mojom::PageHandler> remote;
++  mojo::PendingRemote<new_tab_page_third_party::mojom::Page> page;
++  auto receiver = page.InitWithNewPipeAndPassReceiver();
++  NewTabPageThirdPartyHandler handler(
++      remote.BindNewPipeAndPassReceiver(), std::move(page),
++      chrome_test_utils::GetProfile(this),
++      chrome_test_utils::GetActiveWebContents(this));
++  bool focused = true;
++  handler.FocusOmnibox(base::BindOnce(
++      [](bool* result, bool value) { *result = value; }, &focused));
++  EXPECT_FALSE(focused);
++}
+diff --git a/chrome/test/data/webui/new_tab_page_third_party/orbit_test.ts b/chrome/test/data/webui/new_tab_page_third_party/orbit_test.ts
+new file mode 100644
+--- /dev/null
++++ b/chrome/test/data/webui/new_tab_page_third_party/orbit_test.ts
+@@ -0,0 +1,94 @@
++import {BrowserProxy} from 'chrome://webui-test/orbit-production/browser_proxy.js';
++import {PageCallbackRouter} from 'chrome://webui-test/orbit-production/new_tab_page_third_party.mojom-webui.js';
++import type {PageHandlerRemote, Theme} from 'chrome://webui-test/orbit-production/new_tab_page_third_party.mojom-webui.js';
++import {loadTimeData} from 'chrome://resources/js/load_time_data.js';
++import {assertEquals, assertFalse, assertTrue} from 'chrome://webui-test/chai_assert.js';
++import {microtasksFinished} from 'chrome://webui-test/test_util.js';
++
++suite('TrinolOrbitNewTab', () => {
++  let applyTheme: (theme: Theme) => void;
++  let calls = 0;
++  let focused = true;
++  let button: HTMLButtonElement;
++  let status: HTMLElement;
++
++  suiteSetup(async () => {
++    button = document.createElement('button');
++    button.id = 'search';
++    status = document.createElement('p');
++    status.id = 'focus-status';
++    document.body.replaceChildren(button, status);
++    loadTimeData.overrideValues({focusUnavailable: 'Use the address bar shortcut'});
++    BrowserProxy.setInstance({
++      callbackRouter: new PageCallbackRouter(),
++      handler: {
++        updateTheme() {},
++        focusOmnibox() {
++          ++calls;
++          return Promise.resolve({focused});
++        },
++      } as unknown as PageHandlerRemote,
++    });
++    const page = await import('chrome://webui-test/orbit-production/new_tab_page_third_party.js');
++    applyTheme = page.applyTheme;
++    assertEquals(0, calls, 'Initialization must not steal native omnibox focus');
++  });
++
++  setup(() => {
++    calls = 0;
++    focused = true;
++    status.textContent = '';
++  });
++
++  function theme(dark: boolean): Theme {
++    return {
++      textColor: {value: 0xff172234},
++      isDark: dark,
++      id: '',
++      colorBackground: '#fbfcfe',
++      backgroundTiling: 'no-repeat',
++      backgroundPosition: 'center',
++      hasCustomBackground: false,
++      useOrbitColors: true,
++    };
++  }
++
++  test('FocusDelegatesToNativeOmniboxWithoutQueryOrURL', async () => {
++    button.click();
++    await microtasksFinished();
++    assertEquals(1, calls);
++    assertEquals('', status.textContent);
++    assertEquals(0, document.querySelectorAll('input, form').length);
++  });
++
++  test('UnavailableFocusIsAnnounced', async () => {
++    focused = false;
++    button.click();
++    await microtasksFinished();
++    assertEquals('Use the address bar shortcut', status.textContent);
++  });
++
++  test('BrowserAppearanceUpdatesBothModes', () => {
++    applyTheme(theme(true));
++    assertTrue(document.documentElement.hasAttribute('dark'));
++    applyTheme(theme(false));
++    assertFalse(document.documentElement.hasAttribute('dark'));
++    assertFalse(document.documentElement.hasAttribute('custom-theme'));
++    assertEquals('', document.documentElement.style.getPropertyValue('--page'));
++  });
++
++  test('CustomThemeIsPreservedAndThemeIdentifierIsEncoded', () => {
++    const custom = theme(false);
++    custom.useOrbitColors = false;
++    custom.colorBackground = '#123456';
++    custom.hasCustomBackground = true;
++    custom.id = 'theme) id';
++    applyTheme(custom);
++    const html = document.documentElement;
++    assertTrue(html.hasAttribute('custom-theme'));
++    assertEquals('#123456', html.style.getPropertyValue('--page'));
++    assertTrue(html.style.backgroundImage.includes(new URLSearchParams({id: custom.id}).toString()));
++    applyTheme(theme(false));
++    assertEquals('none', html.style.backgroundImage);
++  });
++});

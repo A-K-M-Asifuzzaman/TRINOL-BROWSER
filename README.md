@@ -20,7 +20,8 @@ require separate review. See the [R6 report](docs/phase-1c-r6-observation-reliab
 and its one bounded native session exposed an incorrect macOS frame eligibility
 guard. The source correction compiled successfully; its regression case is tracked
 in the [native report](docs/phase-2b1-native-shell-report.md); corrected Orbit appearance
-was later observed in the single 2B1-V trial below. No Phase 2B2 is authorized.
+was later observed in the single 2B1-V trial below. The New Tab slice is now
+separately approved in Phase 2B2.
 
 **Phase 2B1-V is PARTIAL:** the corrected artifact, previous trial and archives
 passed offline verification. The existing C++ test translation unit compiled
@@ -31,6 +32,13 @@ security and frame-state coverage remains incomplete. Normal Quit, real exit 0,
 helper cleanup and valid continuity passed for this trial. Its authorization is
 permanently consumed; preserve the review guard and do not launch again. See the
 [validation report](docs/phase-2b1-v-native-visual-validation.md).
+
+**Phase 2B2 native Orbit New Tab is implemented and compiled; visual acceptance
+is pending:** bundled trusted WebUI, real native omnibox entry, theme support and
+GRIT strings are implemented through
+reviewed patches/overlays. Shortcuts and full Realbox remain deferred. See the
+[New Tab report](docs/phase-2b2-new-tab-report.md) for actual build/test evidence.
+This phase does not authorize a native launch or retire historical reliability gaps.
 
 **Phase 2A design foundation was approved**, independently authorized
 while Phase 1C remains partial. Run `python3 design/prototype/serve.py` and open

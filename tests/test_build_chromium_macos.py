@@ -98,6 +98,29 @@ class ResourceTests(unittest.TestCase):
     def test_generation_does_not_offer_compiler_job_reduction(self):
         self.assertIsNone(b.stop_reason(self.sample(pressure=2), 15*b.GIB, 90, 4, generating=True))
 
+    def test_new_tab_generation_requires_exact_phase_contract_and_one_job(self):
+        probe = Mock()
+        probe.disk.return_value = {'VolumeUUID': b.EXPECTED_VOLUME_UUID}
+        probe.command.return_value = b''
+        volume = SimpleNamespace(device='approved')
+        manifest = {'customization': {'id': 'orbit-native-new-tab-v1'},
+                    'native_new_tab': {'phase': '2b2', 'gn_generation_authorized': True}}
+        args = SimpleNamespace(generate=True, jobs=1, orbit_test_object=False)
+        b.verify_build_gate(args, manifest, volume, probe)
+        for jobs in (2, 4):
+            args.jobs = jobs
+            with self.assertRaises(ValueError):
+                b.verify_build_gate(args, manifest, volume, probe)
+        args.jobs = 1
+        for field, wrong in [('phase', '2b1'), ('gn_generation_authorized', False)]:
+            changed = json.loads(json.dumps(manifest))
+            changed['native_new_tab'][field] = wrong
+            with self.assertRaises(ValueError):
+                b.verify_build_gate(args, changed, volume, probe)
+        manifest['customization']['id'] = 'other'
+        with self.assertRaises(ValueError):
+            b.verify_build_gate(args, manifest, volume, probe)
+
     def test_mount_disconnection(self):
         with patch.object(b.os.path, 'ismount', return_value=False):
             with self.assertRaises(ValueError): b.assert_mount(Path('/build'), Path('/volume'), 7)

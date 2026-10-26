@@ -141,3 +141,16 @@ glass compositing is a source-grounded possibility, not a confirmed runtime
 explanation. Normal Quit/exit 0 and complete cleanup passed for this trial.
 Authorization is consumed and the guard retained; no additional launch, source
 patch, build or Phase 2B2 is authorized. See the current validation report.
+
+## Phase 2B2 implementation boundary
+
+The separately approved New Tab slice selects the existing generic local NTP
+host and its trusted WebUI resource pipeline. The native search entry delegates
+to the real owning omnibox; full Realbox and real shortcut binding remain deferred.
+This keeps provider semantics and profile data in upstream services. Separate
+GRIT strings avoid editing the browser-wide generated-resources string catalogue.
+Policy and extension overrides retain precedence. See the
+[Phase 2B2 report](../phase-2b2-new-tab-report.md) for exact source paths, security
+checks and build evidence. A future native acceptance session needs a separately
+reviewed one-use authorization; all existing markers remain protected. Sidebar,
+workspaces and command palette implementation remain outside this approval.

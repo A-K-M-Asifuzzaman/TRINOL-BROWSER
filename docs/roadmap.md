@@ -80,3 +80,17 @@ trial, PID 88337: native Quit, exit 0, helpers empty, no watchdog/dump and bound
 continuity. Dark/light surfaces were observed; full controlled frame/focus/security
 acceptance remains PARTIAL. The authorization is now permanently consumed and the
 review guard retained. No existing flag authorizes another launch or Phase 2B2.
+
+Phase 2B2 is now explicitly approved for the native Orbit New Tab implementation,
+source/frontend validation and one-job guarded incremental compilation. This
+supersedes the earlier authorization boundary above while retaining those
+historical findings. The [New Tab report](phase-2b2-new-tab-report.md) records the
+actual outcome. No native launch is authorized by this phase; exact-build visual,
+keyboard, routing/override and lifecycle acceptance remain separate. The consumed
+2B1-V authorization, active review guard and archives stay intact. Sidebar,
+workspaces and command palette remain unauthorized.
+
+The Phase 2B2 native target completed incrementally: 494 actions, exit 0. Bundled
+Orbit resources, nine GRIT messages and preserved artifacts/markers passed offline
+verification. Native visual acceptance and browser-test execution remain pending
+a separately reviewed launch; this does not complete Phase 1C or retire 2B1 gaps.

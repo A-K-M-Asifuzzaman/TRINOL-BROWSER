@@ -294,7 +294,13 @@ def verify_build_gate(args, manifest, volume, probe):
         raise ValueError('Orbit test object requires preserved GN output and one job')
     if probe.disk(volume.device).get('VolumeUUID') != EXPECTED_VOLUME_UUID:
         raise ValueError('Unexpected external APFS UUID')
-    if manifest.get('customization') and (args.generate or args.jobs != 1):
+    new_tab_generation = (
+        manifest.get('native_new_tab', {}).get('phase') == '2b2' and
+        manifest.get('native_new_tab', {}).get('gn_generation_authorized') is True and
+        isinstance(manifest.get('customization'), dict) and
+        manifest['customization'].get('id') == 'orbit-native-new-tab-v1')
+    if manifest.get('customization') and (args.jobs != 1 or
+            (args.generate and not new_tab_generation)):
         raise ValueError('Native Orbit slice requires preserved GN output and one build job')
     commands = probe.command('/bin/ps', '-axo', 'comm=').decode().splitlines()
     if any(Path(p.strip()).name in ('siso', 'ninja', 'autoninja', 'clang', 'clang++', 'Chromium') for p in commands):
