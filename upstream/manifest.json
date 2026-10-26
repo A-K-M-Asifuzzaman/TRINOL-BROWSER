@@ -895,5 +895,27 @@
       "evidence": "logs/phase2b2-object-zd_t3feg",
       "prior_compile_failure": "Five legacy Browser::profile() calls corrected using pinned chrome_test_utils; production inputs unchanged"
     }
+  },
+  "native_new_tab_validation": {
+    "phase": "2b2-v",
+    "status": "offline_gate_prepared_native_not_tested",
+    "report": "docs/phase-2b2-v-native-new-tab-validation.md",
+    "reviewed_product_revision": "46b40aff898e231ed518a101cc2495c94c75509c",
+    "operator_available": false,
+    "operator_response": "Not available; prepare offline tooling only",
+    "authorization_consumed": false,
+    "new_browser_launches": 0,
+    "profile_created": false,
+    "claim_created": false,
+    "native_visual_result": "NOT TESTED",
+    "browser_exit_code": null,
+    "planned_seconds": 360,
+    "planned_grace_seconds": 30,
+    "historical_records_verified_offline": 25,
+    "artifact_paths_verified_offline": 7,
+    "source_contract_sha256": "041b497f44285a8e2708f8f20de0a9adede7555eb5c38bcd4363ace2d4ce147d",
+    "phase_2b3_authorized": false,
+    "python_tests": 282,
+    "prototype_model_tests": 4
   }
 }

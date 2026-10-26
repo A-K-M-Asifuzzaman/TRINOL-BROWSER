@@ -550,6 +550,8 @@ def main():
                         help='Fresh operator confirmation: present, unlocked, direct GUI observation/cleanup')
     parser.add_argument('--phase-2b1v-visual', action='store_true',
                         help='ONE exact corrected-palette trial authorized by Phase 2B1-V')
+    parser.add_argument('--phase-2b2v-new-tab', action='store_true',
+                        help='ONE exact New Tab trial; fresh operator confirmation required')
     parser.add_argument('--window-observer', type=Path,
                         help='Exact previously tested nonlaunching WindowServer utility under build root')
     parser.add_argument('--workload', choices=('blank', 'browsing'), default='blank')
@@ -559,6 +561,13 @@ def main():
     process = None
     writer = None
     try:
+        import phase2b2v_runtime as new_tab
+        if args.phase_2b2v_new_tab:
+            new_tab.check_options(args.operator_present, args.seconds, args.grace_seconds,
+                args.workload, args.phase_2b1v_visual or args.reviewed_r4_retry or
+                args.reviewed_r5_retry or args.reviewed_r6_ui_smoke)
+            if not args.window_observer or args.volume_uuid != EXPECTED_VOLUME_UUID:
+                raise ValueError('2B2-V requires the exact reviewed observer and APFS UUID')
         if (platform.system(), platform.machine()) != ('Darwin', 'arm64'):
             raise ValueError('Native macOS arm64 required')
         root = args.build_root.absolute()
@@ -574,11 +583,22 @@ def main():
         with build_lock(root):
             import phase2b1v_runtime as visual
             rows = snapshot(app)
-            if contained(root, visual.CLAIM).exists():
+            if contained(root, new_tab.CLAIM).exists() or contained(root, new_tab.GUARD).exists():
+                raise ValueError('Phase 2B2-V consumed; no additional launch')
+            if contained(root, visual.CLAIM).exists() and not args.phase_2b2v_new_tab:
                 raise ValueError('Phase 2B1-V authorization consumed; no additional launch')
-            if contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json').exists() and not args.phase_2b1v_visual:
+            if (contained(root, 'logs/TrinolLifecycle.r6-ui-reviewed.json').exists()
+                    and not (args.phase_2b1v_visual or args.phase_2b2v_new_tab)):
                 raise ValueError('Phase 2B1 session consumed; separate review required for any new launch')
             authorization = None
+            if args.phase_2b2v_new_tab:
+                visual = new_tab
+                # Repeat under the shared lock so a concurrent guarded build cannot
+                # invalidate the source/executable checks performed above it.
+                verify(manifest, root / 'chromium', root / 'depot_tools')
+                exe = verify_executable(root, manifest['chromium']['version'])
+                authorization = visual.review(root, rows, manifest, args.window_observer.absolute())
+                latch = contained(root, visual.GUARD)
             if args.phase_2b1v_visual:
                 if (not args.operator_present or not args.window_observer or
                         args.volume_uuid != EXPECTED_VOLUME_UUID or
@@ -608,10 +628,12 @@ def main():
             internal = os.statvfs('/')
             if internal.f_bavail * internal.f_frsize <= 10 * GIB:
                 raise ValueError('Insufficient internal swap headroom')
-            run = Path(tempfile.mkdtemp(prefix='phase2b1v-visual-' if args.phase_2b1v_visual else
+            run = Path(tempfile.mkdtemp(prefix='phase2b2v-new-tab-' if args.phase_2b2v_new_tab else
+                                       'phase2b1v-visual-' if args.phase_2b1v_visual else
                                        'phase2b1-ui-' if args.reviewed_r6_ui_smoke
                                        else 'phase1cr6-lifecycle-', dir=logs))
-            profile, crash = isolated_profile(root, 'test-profile-2b1v-' if args.phase_2b1v_visual else
+            profile, crash = isolated_profile(root, 'test-profile-2b2v-' if args.phase_2b2v_new_tab else
+                                             'test-profile-2b1v-' if args.phase_2b1v_visual else
                                              'test-profile-2b1-' if args.reviewed_r6_ui_smoke
                                              else 'test-profile-r6-')
             device = root.stat().st_dev
@@ -632,6 +654,11 @@ def main():
             for sig in (signal.SIGINT, signal.SIGTERM):
                 signal.signal(sig, lambda *_: interrupted.append(True))
             guard()
+            if args.phase_2b2v_new_tab:
+                visual.check_profile(root, profile, crash)
+                authorization = visual.review(root, snapshot(app), manifest, args.window_observer.absolute())
+                if memory(probe)['pressure'] != 1:
+                    raise ValueError('Normal idle memory pressure required immediately before claim')
             # A crash of this supervisor must also block the next launch.
             writer = EvidenceWriter(root, run, device, TIMING)
             if authorization:
@@ -681,6 +708,18 @@ def main():
             result['dumps'] = [str(p.relative_to(profile)) for p in crash.rglob('*.dmp')]
             if result['dumps']:
                 result['failure'] = result['failure'] or 'crash_dump_created'
+            if args.phase_2b2v_new_tab:
+                try:
+                    final_health = dict(guard(), remaining=snapshot(app),
+                        internal_available_bytes=os.statvfs('/').f_bavail * os.statvfs('/').f_frsize)
+                    (run / 'final-health.json').write_text(json.dumps(final_health, indent=2) + '\n')
+                    if final_health['remaining']:
+                        result['failure'] = result['failure'] or 'compiled_processes_remain_at_final_check'
+                        result['cleanup_required'] = True
+                    visual.check_records(root, visual.HISTORY)
+                    visual.check_records(root, visual.ARTIFACTS)
+                except Exception as exc:
+                    result['failure'] = result['failure'] or 'final_health_failed: ' + str(exc)
             result['clean_shutdown'] = classify(result['exit_code'], result['quit_requested'],
                 result['failure'], result['watchdog'], result['remaining'])
             result['gui_and_functional_tests'] = 'NOT TESTED'

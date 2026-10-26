@@ -438,7 +438,8 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual(Path(retry['archive']).read_bytes(), raw)
         with self.assertRaises(ValueError): life.review_r4_marker(self.root, latch, [])
 
-    def run_main(self, rows=(), latch=False, outcome='PASS', extra_args=(), ui_consumed=False, visual_consumed=False):
+    def run_main(self, rows=(), latch=False, outcome='PASS', extra_args=(), ui_consumed=False,
+                 visual_consumed=False, new_tab_consumed=False, pressure=1):
         from contextlib import ExitStack
         (self.root / 'logs').mkdir()
         marker = self.root / 'logs/TrinolLifecycle.blocked.json'
@@ -448,6 +449,8 @@ class LifecycleTests(unittest.TestCase):
             (self.root / 'logs/TrinolLifecycle.r6-ui-reviewed.json').write_text('{}')
         if visual_consumed:
             (self.root / 'logs/TrinolLifecycle.phase2b1v-authorization.json').write_text('{}')
+        if new_tab_consumed:
+            (self.root / 'logs/TrinolLifecycle.phase2b2v-authorization.json').write_text('{}')
         volume = SimpleNamespace(device='disk7s2', mount=str(self.root))
         probe = Mock(disk=Mock(return_value={'VolumeUUID': 'expected'}))
         result = dict(exit_code=0, quit_requested=True,
@@ -457,14 +460,15 @@ class LifecycleTests(unittest.TestCase):
                                   ('inspect_storage', volume), ('verify', []),
                                   ('verify_executable', self.exe), ('snapshot', list(rows)),
                                   ('command', ''), ('MacProbe', probe), ('EvidenceWriter', Mock(error=None,
-                                   finish=Mock(return_value={'error': None}))), ('memory',
-                                   {'pressure': 1, 'swap_bytes': 0}), ('supervise', result),
+                                   finish=Mock(return_value={'error': None}))), ('supervise', result),
                                   ('assert_mount', None)]:
                 stack.enter_context(patch.object(life, target, return_value=value)
                     if '.' not in target else patch('test_chromium_lifecycle_macos.' + target,
                                                    return_value=value))
             stack.enter_context(patch.object(life.os, 'statvfs', return_value=
                                             SimpleNamespace(f_bavail=100*life.GIB, f_frsize=1)))
+            stack.enter_context(patch.object(life, 'memory', return_value={'pressure':pressure,'swap_bytes':0},
+                side_effect=[{'pressure':p,'swap_bytes':0} for p in pressure] if isinstance(pressure,list) else None))
             stack.enter_context(patch.object(life.signal, 'signal'))
             stack.enter_context(patch('builtins.print'))
             stack.enter_context(patch.object(sys, 'argv', ['lifecycle', '--build-root',
@@ -603,6 +607,72 @@ class LifecycleTests(unittest.TestCase):
         self.assertEqual((code, calls), (0, 1))
         self.assertEqual(json.loads(marker.read_text())['visual_validation'], 'PENDING_REVIEW')
         self.assertTrue((self.root/visual.CLAIM).exists())
+
+    def test_new_tab_without_operator_cannot_create_profile_or_claim(self):
+        with patch.object(life, 'isolated_profile') as profile:
+            code, _, calls = self.run_main(extra_args=['--phase-2b2v-new-tab'])
+        self.assertEqual((code, calls), (2, 0)); profile.assert_not_called()
+
+    def test_new_tab_consumed_blocks_old_modes(self):
+        code, _, calls = self.run_main(new_tab_consumed=True)
+        self.assertEqual((code, calls), (2, 0))
+
+    def test_new_tab_mixed_flags_cannot_reuse_old_authorization(self):
+        with patch.object(life, 'isolated_profile') as profile:
+            code, _, calls = self.run_main(extra_args=['--phase-2b2v-new-tab',
+                '--operator-present', '--seconds', '360', '--phase-2b1v-visual'])
+        self.assertEqual((code, calls), (2, 0)); profile.assert_not_called()
+
+    def test_new_tab_memory_failure_never_claims_or_creates_profile(self):
+        import phase2b2v_runtime as visual
+        with patch.object(visual, 'review', return_value={'phase':'2b2-v'}), \
+             patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'), \
+             patch.object(life, 'isolated_profile') as profile:
+            code, _, calls = self.run_main(latch=True, visual_consumed=True, pressure=2,
+                extra_args=['--phase-2b2v-new-tab', '--operator-present', '--seconds','360',
+                            '--window-observer','/fixture'])
+        self.assertEqual((code, calls), (2, 0)); profile.assert_not_called()
+        self.assertFalse((self.root/visual.CLAIM).exists())
+
+    def test_new_tab_pass_uses_separate_guard_and_preserves_historical_marker(self):
+        import phase2b2v_runtime as visual
+        with patch.object(visual, 'review', return_value={'phase':'2b2-v'}), \
+             patch.object(visual, 'check_records') as records, \
+             patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'):
+            code, marker, calls = self.run_main(latch=True, visual_consumed=True,
+                extra_args=['--phase-2b2v-new-tab', '--operator-present', '--seconds','360',
+                            '--window-observer','/fixture'])
+        self.assertEqual((code, calls), (0, 1)); self.assertEqual(marker.read_text(), '{}')
+        self.assertEqual(json.loads((self.root/visual.GUARD).read_text())['visual_validation'], 'PENDING_REVIEW')
+        self.assertTrue((self.root/visual.CLAIM).exists())
+        self.assertEqual((self.root/'logs/TrinolLifecycle.phase2b1v-authorization.json').read_text(), '{}')
+        self.assertEqual(records.call_count, 2)
+        run = Path(json.loads((self.root/visual.CLAIM).read_text())['evidence'])
+        self.assertEqual(json.loads((run/'final-health.json').read_text())['remaining'], [])
+
+    def test_new_tab_final_integrity_failure_invalidates_pass_and_retains_claim(self):
+        import phase2b2v_runtime as visual
+        with patch.object(visual, 'review', return_value={'phase':'2b2-v'}), \
+             patch.object(visual, 'check_records', side_effect=ValueError('historical file changed')), \
+             patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'):
+            code, marker, calls = self.run_main(latch=True, visual_consumed=True,
+                extra_args=['--phase-2b2v-new-tab', '--operator-present', '--seconds','360',
+                            '--window-observer','/fixture'])
+        self.assertEqual((code, calls), (1, 1)); self.assertEqual(marker.read_text(), '{}')
+        guard = json.loads((self.root/visual.GUARD).read_text())
+        self.assertEqual(guard['result']['clean_shutdown'], 'FAIL')
+        self.assertIn('final_health_failed', guard['result']['failure'])
+        self.assertTrue((self.root/visual.CLAIM).exists())
+
+    def test_new_tab_pressure_deterioration_before_claim_prevents_launch(self):
+        import phase2b2v_runtime as visual
+        with patch.object(visual, 'review', return_value={'phase':'2b2-v'}), \
+             patch.object(life, 'EXPECTED_VOLUME_UUID', 'expected'):
+            code, _, calls = self.run_main(latch=True, visual_consumed=True, pressure=[1,1,2],
+                extra_args=['--phase-2b2v-new-tab', '--operator-present', '--seconds','360',
+                            '--window-observer','/fixture'])
+        self.assertEqual((code, calls), (2, 0))
+        self.assertFalse((self.root/visual.CLAIM).exists())
 
 
 if __name__ == '__main__':

@@ -10,6 +10,7 @@ import time
 
 from build_chromium_macos import contained
 import phase2b1v_runtime as visual
+import phase2b2v_runtime as new_tab
 import test_chromium_lifecycle_macos as life
 
 
@@ -20,10 +21,12 @@ def capture(root, run, observer, name, window_id=None):
     if (run / 'result.json').exists():
         raise ValueError('Session already finished; never launch another browser for capture')
     launch = json.loads(contained(root, (run / 'launch.json').relative_to(root)).read_text())
-    claim = json.loads(contained(root, visual.CLAIM).read_text())
+    phase = launch.get('visual_authorization', {}).get('phase')
+    gate = new_tab if phase == '2b2-v' else visual
+    claim = json.loads(contained(root, gate.CLAIM).read_text())
     if (claim['evidence'] != str(run) or claim['authorization'] != launch.get('visual_authorization')
-            or claim['authorization']['phase'] != '2b1-v'):
-        raise ValueError('Capture must belong to the claimed Phase 2B1-V supervised session')
+            or phase not in ('2b1-v', '2b2-v')):
+        raise ValueError('Capture must belong to the claimed supervised visual session')
     lines = contained(root, (run / 'events.jsonl').relative_to(root)).read_text().splitlines(keepends=True)
     events = [json.loads(line) for line in lines if line.endswith('\n')]
     original = next(e['browser_identity'] for e in events if e['event'] == 'process_identity_verified')
@@ -33,9 +36,12 @@ def capture(root, run, observer, name, window_id=None):
         raise ValueError('Capture does not identify the supervised disposable-profile browser')
 
     def recheck():
-        rows = life.snapshot(root / life.APP, launch['pid'])
+        rows = life.snapshot(root / life.APP)
         if not any(life.identity(row) == life.identity(original) for row in rows):
             raise ValueError('Supervised PID/start/executable identity no longer exists')
+        if any(row['executable'] == original['executable'] and
+               life.identity(row) != life.identity(original) for row in rows):
+            raise ValueError('Unexpected extra browser; capture isolation failed')
 
     observer = visual.check_observer(root, observer)
     recheck()
@@ -45,7 +51,7 @@ def capture(root, run, observer, name, window_id=None):
         raise ValueError('Choose one verified owned window; available IDs: ' + str([w['window_id'] for w in windows]))
     window = candidates[0]
     library = contained(root, 'chromium/src/out/TrinolDev/libchrome_dll.dylib')
-    if visual.sha256(library) != visual.LIBRARY_SHA256:
+    if visual.sha256(library) != gate.LIBRARY_SHA256:
         raise ValueError('Corrected library changed before capture')
     loaded = subprocess.check_output(['/usr/sbin/lsof', '-p', str(launch['pid']), '-Fn'], timeout=5).decode()
     if 'n' + str(library) not in loaded.splitlines():
@@ -63,7 +69,8 @@ def capture(root, run, observer, name, window_id=None):
         raise ValueError('Capture did not produce a PNG with positive dimensions')
     record = dict(time_unix=time.time(), browser_identity=life.identity(original), window=window,
                   image_pixels=struct.unpack('>II', header[16:24]),
-                  library_sha256=visual.LIBRARY_SHA256, capture_sha256=visual.sha256(target))
+                  library_sha256=gate.LIBRARY_SHA256, capture_sha256=visual.sha256(target),
+                  phase=phase, state_validation='PENDING_INSPECTION')
     with (run / (name + '.json')).open('x') as stream:
         json.dump(record, stream, indent=2); stream.write('\n')
     return target

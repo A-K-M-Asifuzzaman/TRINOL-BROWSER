@@ -333,3 +333,12 @@ exact-commit GitHub Actions run 40236281482 succeeded. The feature delivery uses
 Its immutable commit hash, confirmed origin/main and exact-commit Actions result
 are supplied in the final delivery response after pushing; this report does not
 claim foundation CI executes Chromium or the native tests.
+
+## Subsequent Phase 2B2-V offline preparation
+
+The separately reviewed exact-build verification phase has prepared the one-use
+New Tab runtime gate and capture binding. The operator explicitly requested
+offline tooling only; no profile, claim or browser was created and no compilation
+was repeated. Current acceptance remains pending. See the
+[validation report](phase-2b2-v-native-new-tab-validation.md) for safety checkpoint,
+offline integrity results, fixed six-minute protocol and deferred native checks.

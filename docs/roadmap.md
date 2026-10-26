@@ -94,3 +94,13 @@ The Phase 2B2 native target completed incrementally: 494 actions, exit 0. Bundle
 Orbit resources, nine GRIT messages and preserved artifacts/markers passed offline
 verification. Native visual acceptance and browser-test execution remain pending
 a separately reviewed launch; this does not complete Phase 1C or retire 2B1 gaps.
+
+Phase 2B2-V now separately authorizes preparing one exact-build New Tab trial.
+The operator requested offline tooling only. The new gate, separate permanent
+claim/review paths and capture binding are prepared and tested; no profile,
+claim or native session was created. The earlier pressure 2/2/2 checkpoint also
+failed the normal-memory launch gate. Acceptance remains PARTIAL pending fresh
+operator confirmation and every safety check. See the
+[native New Tab validation report](phase-2b2-v-native-new-tab-validation.md).
+Historical markers remain immutable; no rebuild, repeat trial or next phase is
+authorized by this offline milestone.

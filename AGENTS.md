@@ -82,6 +82,16 @@ requires a separately reviewed one-use authorization and fresh operator presence
 Do not reuse or clear old gates. Keep prior regression gaps explicit. No sidebar,
 workspaces, command palette, AI, app rename or next phase is authorized.
 
+Phase 2B2-V authorizes one exact-build New Tab acceptance session only through
+`--phase-2b2v-new-tab --operator-present --seconds 360 --grace-seconds 30`, with
+the reviewed WindowServer observer and fresh explicit operator confirmation.
+The operator is currently unavailable and requested offline tooling only: do not
+launch, create a profile or consume authorization until fresh confirmation and
+all prelaunch gates pass. Keep the old 2B1-V claim/guard and archives immutable;
+use separate permanent 2B2-V claim/review paths under the shared lock. Preserve
+the new claim and final review guard after every outcome. Never reuse flags or
+retry a failed/consumed session. No browser rebuild or Phase 2B3 is authorized.
+
 ## Quality and tests
 
 Use Chromium style and ownership/lifetime conventions in C++, its WebUI patterns
